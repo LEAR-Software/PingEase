@@ -43,11 +43,13 @@ ROUTER_URL  = os.getenv("ROUTER_URL",  "http://192.168.100.1")
 ROUTER_USER = os.getenv("ROUTER_USER", "admin")
 ROUTER_PASS = os.getenv("ROUTER_PASS", "admin")
 
-SCAN_INTERVAL_SECONDS = int(os.getenv("SCAN_INTERVAL_SECONDS", "300"))
-TRIAL_PERIOD_SECONDS  = int(os.getenv("TRIAL_PERIOD_SECONDS",  "300"))
-PING_DEGRADATION_MS   = int(os.getenv("PING_DEGRADATION_MS",   "20"))
-JITTER_DEGRADATION_MS = int(os.getenv("JITTER_DEGRADATION_MS", "15"))
-SPEED_DEGRADATION_PCT = float(os.getenv("SPEED_DEGRADATION_PCT", "0.40"))
+SCAN_INTERVAL_SECONDS    = int(os.getenv("SCAN_INTERVAL_SECONDS",    "300"))
+CHANGE_COOLDOWN_SECONDS  = int(os.getenv("CHANGE_COOLDOWN_SECONDS",  "3600"))
+HYSTERESIS_THRESHOLD     = float(os.getenv("HYSTERESIS_THRESHOLD",   "0.40"))
+TRIAL_PERIOD_SECONDS     = int(os.getenv("TRIAL_PERIOD_SECONDS",     "300"))
+PING_DEGRADATION_MS      = int(os.getenv("PING_DEGRADATION_MS",      "20"))
+JITTER_DEGRADATION_MS    = int(os.getenv("JITTER_DEGRADATION_MS",    "15"))
+SPEED_DEGRADATION_PCT    = float(os.getenv("SPEED_DEGRADATION_PCT",  "0.40"))
 
 # ---------------------------------------------------------------------------
 # Router driver registry
@@ -108,7 +110,7 @@ def main() -> None:
     router = _build_router()
     log.info("Router driver: %s  (%s)", router.__class__.__name__, router.url)
 
-    state: dict = {"current_24": None, "current_5": None}
+    state: dict = {"current_24": None, "current_5": None, "last_change_ts": 0.0}
     if not dry_run:
         state["current_24"], state["current_5"] = router.read_channels()
 
@@ -121,6 +123,8 @@ def main() -> None:
         ping_threshold_ms=PING_DEGRADATION_MS,
         jitter_threshold_ms=JITTER_DEGRADATION_MS,
         speed_drop_pct=SPEED_DEGRADATION_PCT,
+        hysteresis_threshold=HYSTERESIS_THRESHOLD,
+        change_cooldown_seconds=CHANGE_COOLDOWN_SECONDS,
     )
 
     if once:

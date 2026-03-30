@@ -157,7 +157,9 @@ python main.py --monitor --interval 60 --duration 3600
 | `ROUTER_USER` | `admin` | Admin username |
 | `ROUTER_PASS` | `admin` | Admin password |
 | `ROUTER_DRIVER` | `huawei_hg8145x6` | Router automation driver key (see [Adding a new router](#-adding-a-new-router-model)) |
-| `SCAN_INTERVAL_SECONDS` | `300` | Seconds between daemon scans |
+| `SCAN_INTERVAL_SECONDS` | `300` | Seconds between RF scans in daemon mode. Cheap — only runs `netsh`, no router contact. |
+| `CHANGE_COOLDOWN_SECONDS` | `3600` | Minimum time between actual router channel changes (seconds). Scanning still happens every `SCAN_INTERVAL_SECONDS` but no change is applied until this cooldown expires. Prevents hammering the router. |
+| `HYSTERESIS_THRESHOLD` | `0.40` | Minimum relative improvement required to trigger a change (0.40 = 40%). Only interrupts the radio for a dramatic gain. |
 | `TRIAL_PERIOD_SECONDS` | `300` | Seconds after a channel change before quality is evaluated. 5 min is enough to stabilize without ruining a full match. |
 | `PING_DEGRADATION_MS` | `20` | Gateway RTT increase (ms) that triggers a revert. 20 ms is perceptible in competitive gaming. |
 | `JITTER_DEGRADATION_MS` | `15` | Jitter increase (ms) that triggers a revert. 15 ms of extra jitter causes rubber-banding in most games. |
