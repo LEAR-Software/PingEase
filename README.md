@@ -4,6 +4,8 @@ Automated Wi-Fi channel optimizer for **Huawei HG8145X6** (ONT WiFi 6) — teste
 
 Scans the surrounding RF spectrum, selects the least-congested channel for both 2.4 GHz and 5 GHz bands, and reconfigures the router automatically using browser automation.
 
+> **Primary use case:** reduce latency for **multiplayer gaming** — the quality metrics and revert logic are tuned for low ping and low jitter, not throughput.
+
 ---
 
 ## ✨ Features
@@ -16,10 +18,36 @@ Scans the surrounding RF spectrum, selects the least-congested channel for both 
 | **2.4 GHz rules** | Restricts candidates to non-overlapping channels **1, 6, 11** |
 | **5 GHz rules** | Prefers non-DFS channels (36–48, 149–161) for stability |
 | **Router automation** | Headless Chromium via Playwright — no manual interaction needed |
-| **Quality monitoring** | Measures ping + download speed before and after the change |
-| **Auto-revert** | Reverts to the previous channel if quality degrades after 30 min |
+| **Gaming-aware quality monitoring** | Measures **gateway RTT + jitter** before and after every change |
+| **Auto-revert** | Reverts within 5 min if jitter or gateway ping degrade |
 | **Daemon mode** | Runs continuously, re-scanning every 5 minutes |
 | **`.env` config** | All credentials and tuning parameters live outside the source code |
+
+---
+
+## 🎮 Quality metrics — why they matter for gaming
+
+The system measures three metrics **against the router gateway** (`192.168.100.1`), not an internet host. This isolates the Wi-Fi hop from ISP/backbone noise.
+
+| Metric | What it measures | Why it matters for gaming |
+|---|---|---|
+| **Gateway RTT** (`ping_gw_ms`) | Round-trip time to `192.168.100.1` — the Wi-Fi hop only | High gateway RTT means the radio channel itself is congested. Target: **< 5 ms** |
+| **Jitter** (`jitter_ms`) | Std-dev of individual RTT samples (8 pings) | More harmful than high-but-stable ping. Causes rubber-banding & hit-registration issues. Target: **< 5 ms** |
+| **Download speed** (`speed_mbps`) | 1 MB probe via Cloudflare | Secondary signal only — game packets are < 1 KB, throughput is irrelevant to latency |
+
+### Revert priority order
+
+```
+1. Jitter increased > JITTER_DEGRADATION_MS  →  revert  ← most sensitive
+2. Gateway RTT increased > PING_DEGRADATION_MS  →  revert
+3. Download speed dropped > SPEED_DEGRADATION_PCT  →  revert  ← least sensitive
+```
+
+### Why ping to 8.8.8.8 was NOT used
+
+Pinging `8.8.8.8` measures the full path: Wi-Fi hop + modem + ISP backbone + Google's network.
+A channel change that genuinely improves the radio can look "worse" if Google's servers are momentarily slower.
+Pinging the gateway eliminates all variables except the channel itself.
 
 ---
 
@@ -113,10 +141,11 @@ python main.py --inspect
 | `ROUTER_URL` | `http://192.168.100.1` | Router admin panel URL |
 | `ROUTER_USER` | `admin` | Admin username |
 | `ROUTER_PASS` | `admin` | Admin password |
-| `SCAN_INTERVAL_SECONDS` | `300` | Seconds between scans in daemon mode |
-| `TRIAL_PERIOD_SECONDS` | `1800` | Seconds to wait before quality check after a channel change |
-| `PING_DEGRADATION_MS` | `100` | Extra latency (ms) that triggers a revert |
-| `SPEED_DEGRADATION_PCT` | `0.40` | Download speed drop fraction (0.40 = 40 %) that triggers a revert |
+| `SCAN_INTERVAL_SECONDS` | `300` | Seconds between daemon scans |
+| `TRIAL_PERIOD_SECONDS` | `300` | Seconds after a channel change before quality is evaluated. 5 min is enough to stabilize without ruining a full match. |
+| `PING_DEGRADATION_MS` | `20` | Gateway RTT increase (ms) that triggers a revert. 20 ms is perceptible in competitive gaming. |
+| `JITTER_DEGRADATION_MS` | `15` | Jitter increase (ms) that triggers a revert. 15 ms of extra jitter causes rubber-banding in most games. |
+| `SPEED_DEGRADATION_PCT` | `0.40` | Download speed drop fraction that triggers a revert (secondary, non-gaming signal). |
 
 ---
 
@@ -153,6 +182,7 @@ Every run appends to `wifi_optimizer.log`:
 2026-03-29 21:47:01 [INFO] Congestion scores 2.4 GHz: {1: -563.0, 6: -227.0, 11: -222.5}
 2026-03-29 21:47:01 [INFO] 2.4 GHz — actual: ch6 (-227.0), óptimo: ch11 (-222.5), mejora: 2.0% → mantener
 2026-03-29 21:47:01 [INFO] Canal ya óptimo o dentro del umbral de histéresis. Sin cambios.
+2026-03-29 21:47:01 [INFO] Calidad Wi-Fi → gateway ping: 11.0 ms | jitter: 4.2 ms | velocidad: 85.3 Mbps
 ```
 
 ---
@@ -165,6 +195,7 @@ WifiChannelOptimizer/
 ├── .env.example         # Config template — copy to .env and fill in
 ├── .env                 # Your local credentials (git-ignored)
 ├── pyproject.toml       # Project metadata and dependencies
+├── PROMPT.md            # Agent instructions & business rules specification
 ├── .gitignore
 ├── README.md
 └── wifi_optimizer.log   # Runtime log (git-ignored)

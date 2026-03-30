@@ -1,5 +1,38 @@
 ﻿# WiFi Channel Auto-Optimizer - Technical Specification
 
+---
+
+## 🤖 Agent Instructions (read before making any change)
+
+> These rules apply to every AI agent or automated tool working on this codebase.
+> They are not optional — treat them as hard constraints.
+
+### 1. Document every business rule change in README.md
+
+Whenever you modify logic that affects **how the system makes decisions**, you must update `README.md` in the same response. This includes, but is not limited to:
+
+- Congestion scoring algorithm (`compute_congestion_scores`, `_adjacent_channels`)
+- Channel selection rules (`CHANNELS_24`, `CHANNELS_5_PREFERRED`, hysteresis threshold)
+- Quality metrics used for revert decisions (`measure_ping_ms`, `measure_jitter_ms`, `_quality_degraded`)
+- Revert trigger thresholds (`PING_DEGRADATION_MS`, `JITTER_DEGRADATION_MS`, `SPEED_DEGRADATION_PCT`)
+- Any new `.env` variable that controls behavior
+
+### 2. Document every new `.env` variable in both `README.md` and `.env.example`
+
+If you add a new configurable parameter, it must appear in:
+- `.env.example` — with a sensible default and an inline comment explaining its purpose and gaming impact
+- `README.md` — in the **Configuration reference** table
+
+### 3. Never hardcode credentials or environment-specific values in `main.py`
+
+All router credentials, URLs, timeouts, and tuning thresholds must come from `os.getenv()`. Defaults in code are acceptable only as fallbacks.
+
+### 4. Keep the primary use case visible
+
+This project exists to **reduce gaming latency**, not to maximize throughput. If you change a metric or threshold, explain in the commit message and in `README.md` why the change is better for low-latency gaming.
+
+---
+
 ## Project Overview
 Este proyecto consiste en un sistema de automatización en Python diseñado para monitorear la saturación de los canales Wi-Fi (2.4GHz y 5GHz) en el entorno local y reconfigurar automáticamente un router **Huawei HG8145X6** para utilizar los canales con menor interferencia.
 

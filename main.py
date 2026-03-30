@@ -57,9 +57,13 @@ SCAN_INTERVAL_SECONDS = int(os.getenv("SCAN_INTERVAL_SECONDS", "300"))
 # Monitoreo post-cambio
 PROBE_HOST            = "8.8.8.8"
 PROBE_DOWNLOAD_URL    = "http://speed.cloudflare.com/__down?bytes=1000000"
-TRIAL_PERIOD_SECONDS  = int(os.getenv("TRIAL_PERIOD_SECONDS",  "1800"))
-PING_DEGRADATION_MS   = int(os.getenv("PING_DEGRADATION_MS",   "100"))
+TRIAL_PERIOD_SECONDS  = int(os.getenv("TRIAL_PERIOD_SECONDS",  "300"))   # 5 min
+PING_DEGRADATION_MS   = int(os.getenv("PING_DEGRADATION_MS",   "20"))    # gateway RTT
+JITTER_DEGRADATION_MS = int(os.getenv("JITTER_DEGRADATION_MS", "15"))    # jitter threshold
 SPEED_DEGRADATION_PCT = float(os.getenv("SPEED_DEGRADATION_PCT", "0.40"))
+
+# Gateway para medir la calidad del salto Wi-Fi exclusivamente
+_ROUTER_HOST = ROUTER_URL.removeprefix("http://").removeprefix("https://").split("/")[0]
 
 def signal_percent_to_dbm(signal_percent: int) -> float:
     """Convert a netsh signal quality percentage to approximate dBm."""
@@ -588,79 +592,161 @@ def _submit_and_wait(page) -> None:
 # Monitoring: ping & download speed
 # ---------------------------------------------------------------------------
 
-def measure_ping_ms(host: str = PROBE_HOST, count: int = 4) -> float | None:
-    """Ping a host usando el comando del SO. Devuelve latencia media en ms o None."""
+def _parse_ping_times(output: str) -> list[float]:
+    """
+    Extrae todas las muestras individuales de RTT de la salida de ping.
+    Cubre formatos EN (time=12ms), ES-EU (tiempo=12ms), ES-LATAM (tiempo<1ms).
+    """
+    return [
+        float(t)
+        for t in re.findall(r"t(?:iempo|ime)[<=]\s*(\d+)\s*ms", output, re.IGNORECASE)
+    ]
+
+
+def measure_ping_ms(host: str | None = None, count: int = 8) -> float | None:
+    """
+    Mide la latencia media al host indicado.
+
+    Para evaluar la calidad del canal Wi-Fi se usa el GATEWAY (router),
+    no un host de internet: el RTT al gateway mide solo el salto inalámbrico,
+    aislando el ruido introducido por la ruta ISP → backbone.
+
+    Devuelve la media en ms, o None si falla.
+    """
+    target = host or _ROUTER_HOST
     try:
         result = subprocess.run(
-            ["ping", "-n", str(count), host],
+            ["ping", "-n", str(count), target],
             capture_output=True, text=True,
             encoding="cp1252", errors="replace",
-            timeout=20,
+            timeout=count * 3 + 5,
         )
         out = result.stdout
-        # EN: "Average = 12ms"  ES-EU: "Promedio = 12ms"
-        m = re.search(r"(?:Average|Promedio)\s*=\s*(\d+)\s*ms", out, re.IGNORECASE)
-        if m:
-            return float(m.group(1))
-        # ES-LATAM Windows: líneas como "Mínimo = 10ms, Máximo = 15ms, Media = 12ms"
-        m = re.search(r"(?:Media|Average)\s*=\s*(\d+)\s*ms", out, re.IGNORECASE)
-        if m:
-            return float(m.group(1))
-        # Fallback: promediar todos los "tiempo=Xms" / "time=Xms" individuales
-        times = re.findall(r"t(?:iempo|ime)[<=]\s*(\d+)\s*ms", out, re.IGNORECASE)
+
+        # Intentar extraer media del resumen (más preciso)
+        for pattern in [
+            r"(?:Average|Promedio|Media)\s*[=:]\s*(\d+)\s*ms",
+        ]:
+            m = re.search(pattern, out, re.IGNORECASE)
+            if m:
+                return float(m.group(1))
+
+        # Fallback: media de muestras individuales
+        times = _parse_ping_times(out)
         if times:
-            vals = [float(t) for t in times]
-            return sum(vals) / len(vals)
+            return sum(times) / len(times)
     except Exception as exc:
-        log.debug("Error midiendo ping: %s", exc)
+        log.debug("Error midiendo ping a %s: %s", target, exc)
+    return None
+
+
+def measure_jitter_ms(host: str | None = None, count: int = 8) -> float | None:
+    """
+    Mide el jitter como desviación estándar de las muestras individuales de RTT.
+
+    El jitter es la métrica más relevante para gaming multijugador:
+    un ping estable de 40 ms es mejor que uno variable de 10–60 ms.
+    Devuelve el jitter en ms, o None si no hay suficientes muestras.
+    """
+    target = host or _ROUTER_HOST
+    try:
+        result = subprocess.run(
+            ["ping", "-n", str(count), target],
+            capture_output=True, text=True,
+            encoding="cp1252", errors="replace",
+            timeout=count * 3 + 5,
+        )
+        times = _parse_ping_times(result.stdout)
+        if len(times) < 2:
+            return None
+        mean = sum(times) / len(times)
+        variance = sum((t - mean) ** 2 for t in times) / len(times)
+        return variance ** 0.5
+    except Exception as exc:
+        log.debug("Error midiendo jitter a %s: %s", target, exc)
     return None
 
 
 def measure_download_mbps(url: str = PROBE_DOWNLOAD_URL, timeout: int = 15) -> float | None:
-    """Descarga un archivo de prueba y calcula Mbps. Devuelve None si falla."""
+    """
+    Descarga un archivo de prueba y calcula Mbps.
+    Útil como señal secundaria; NO es el indicador principal para gaming.
+    """
     try:
         start = time.monotonic()
         with urllib.request.urlopen(url, timeout=timeout) as resp:
             data = resp.read()
         elapsed = time.monotonic() - start
         if elapsed > 0:
-            return (len(data) * 8) / (elapsed * 1_000_000)   # Mbps
+            return (len(data) * 8) / (elapsed * 1_000_000)
     except Exception as exc:
         log.debug("Error midiendo velocidad: %s", exc)
     return None
 
 
 def measure_quality() -> dict[str, float | None]:
-    """Mide ping y velocidad de descarga actuales."""
-    ping   = measure_ping_ms()
-    speed  = measure_download_mbps()
-    log.info("Calidad actual → ping: %s ms | velocidad: %s Mbps",
-             f"{ping:.1f}" if ping else "N/A",
-             f"{speed:.2f}" if speed else "N/A")
-    return {"ping_ms": ping, "speed_mbps": speed}
+    """
+    Mide las tres métricas de calidad relevantes para gaming:
+      1. ping_gw_ms   — RTT al gateway (salto Wi-Fi puro)
+      2. jitter_ms    — desviación estándar del RTT (estabilidad del canal)
+      3. speed_mbps   — velocidad de descarga (señal secundaria)
+    """
+    ping_gw = measure_ping_ms()     # gateway → salto Wi-Fi
+    jitter  = measure_jitter_ms()   # jitter → estabilidad
+    speed   = measure_download_mbps()
+
+    log.info(
+        "Calidad Wi-Fi → gateway ping: %s ms | jitter: %s ms | velocidad: %s Mbps",
+        f"{ping_gw:.1f}" if ping_gw is not None else "N/A",
+        f"{jitter:.1f}"  if jitter  is not None else "N/A",
+        f"{speed:.2f}"   if speed   is not None else "N/A",
+    )
+    return {"ping_gw_ms": ping_gw, "jitter_ms": jitter, "speed_mbps": speed}
 
 
 def _quality_degraded(baseline: dict, current: dict) -> bool:
     """
-    Devuelve True si la calidad actual es significativamente peor
-    que la línea base medida antes del cambio de canal.
+    Detecta degradación de calidad tras un cambio de canal.
+
+    Criterios (en orden de prioridad para gaming):
+      1. Jitter aumentó más de JITTER_DEGRADATION_MS  → revertir
+      2. Ping al gateway aumentó más de PING_DEGRADATION_MS → revertir
+      3. Velocidad cayó más de SPEED_DEGRADATION_PCT   → revertir (señal secundaria)
     """
-    b_ping,  c_ping  = baseline.get("ping_ms"),  current.get("ping_ms")
-    b_speed, c_speed = baseline.get("speed_mbps"), current.get("speed_mbps")
+    b_ping   = baseline.get("ping_gw_ms")
+    c_ping   = current.get("ping_gw_ms")
+    b_jitter = baseline.get("jitter_ms")
+    c_jitter = current.get("jitter_ms")
+    b_speed  = baseline.get("speed_mbps")
+    c_speed  = current.get("speed_mbps")
 
-    if b_ping and c_ping and (c_ping - b_ping) > PING_DEGRADATION_MS:
-        log.warning(
-            "Degradación de ping detectada: %.1f ms → %.1f ms (Δ%.1f ms)",
-            b_ping, c_ping, c_ping - b_ping,
-        )
-        return True
+    # 1. Jitter — el indicador más sensible para gaming
+    if b_jitter is not None and c_jitter is not None:
+        delta_jitter = c_jitter - b_jitter
+        if delta_jitter > JITTER_DEGRADATION_MS:
+            log.warning(
+                "Jitter degradado: %.1f ms → %.1f ms (Δ+%.1f ms > umbral %d ms)",
+                b_jitter, c_jitter, delta_jitter, JITTER_DEGRADATION_MS,
+            )
+            return True
 
-    if b_speed and c_speed and b_speed > 0:
+    # 2. Latencia al gateway (salto Wi-Fi puro)
+    if b_ping is not None and c_ping is not None:
+        delta_ping = c_ping - b_ping
+        if delta_ping > PING_DEGRADATION_MS:
+            log.warning(
+                "Ping gateway degradado: %.1f ms → %.1f ms (Δ+%.1f ms > umbral %d ms)",
+                b_ping, c_ping, delta_ping, PING_DEGRADATION_MS,
+            )
+            return True
+
+    # 3. Velocidad de descarga (señal secundaria)
+    if b_speed is not None and c_speed is not None and b_speed > 0:
         drop = (b_speed - c_speed) / b_speed
         if drop > SPEED_DEGRADATION_PCT:
             log.warning(
-                "Degradación de velocidad detectada: %.2f → %.2f Mbps (−%.0f%%)",
-                b_speed, c_speed, drop * 100,
+                "Velocidad degradada: %.2f → %.2f Mbps (−%.0f%% > umbral %.0f%%)",
+                b_speed, c_speed, drop * 100, SPEED_DEGRADATION_PCT * 100,
             )
             return True
 
