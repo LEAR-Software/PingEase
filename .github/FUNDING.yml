@@ -1,0 +1,11 @@
+﻿# Configuración del botón de "Sponsor" en GitHub
+
+# 1. GitHub Sponsors (Aparece con el ícono oficial de corazón)
+github: matiasmlforever
+
+# 2. Plataformas de micro-donaciones internacionales
+buy_me_a_coffee: matiasmlforever
+
+# 3. Opción personalizada (Ideal para Chile con Flow, Webpay o Khipu)
+# Debes poner la URL completa entre comillas dentro de los corchetes
+custom: ["https://www.flow.cl/btn.php?token=b7cbabd1861bcf3cbbb6bf9b8cf05af15cce8fc6"]
