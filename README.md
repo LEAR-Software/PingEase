@@ -214,47 +214,222 @@ WifiChannelOptimizer/
 
 ## 🔌 Adding a new router model
 
-The optimizer core never talks to the router directly — it only calls the `BaseRouter` interface. Adding support for a new model is isolated to a single file:
+The optimizer core (`optimizer.py`) never talks to the router directly — it only calls two methods on a `BaseRouter` instance. Everything router-specific is isolated inside a single driver file.
 
-### 1 — Create the driver
+### The `BaseRouter` contract
+
+Every driver must implement exactly two methods:
+
+```python
+def read_channels(self) -> tuple[int | None, int | None]:
+    """
+    Log in to the router, read the currently active channel for each band,
+    log out and return (channel_2_4ghz, channel_5ghz).
+    Return None for a band if it could not be read.
+    Called once at startup to initialise the hysteresis state.
+    """
+
+def apply_channels(
+    self,
+    channel_24: int | None,
+    channel_5:  int | None,
+    *,
+    headed: bool = False,
+) -> None:
+    """
+    Log in, set the requested channels, confirm the change, log out.
+    Pass None for a band to leave it unchanged.
+    headed=True opens the browser visibly (triggered by --inspect).
+    """
+```
+
+The base class also provides `self.url`, `self.username`, `self.password`, and a
+`gateway_host` property (the LAN IP derived from `self.url`) that the quality
+monitor uses to measure ping/jitter.
+
+---
+
+### Step-by-step guide
+
+#### Step 1 — Discover your router's selectors with `--inspect`
+
+```bash
+python main.py --inspect
+```
+
+This opens a **visible Chromium window** and saves four HTML snapshots to the project root:
+
+| File | When it is saved |
+|---|---|
+| `router_login_page.html` | Immediately after navigating to `ROUTER_URL` |
+| `router_post_login.html` | After a successful login |
+| `router_wlan24.html` | After opening the 2.4 GHz settings panel |
+| `router_wlan5.html` | After opening the 5 GHz settings panel |
+
+Open these files in a browser and use DevTools (`F12 → Inspector`) to find:
+
+- The **username / password field IDs**
+- The **login button** ID or type
+- The **navigation path** to Wi-Fi channel settings (menu items, links, iframes)
+- The **channel dropdown** selector (`<select>` or `<input>`)
+- The **Apply / Save button** ID
+
+> **Tip:** many routers load the settings panel inside a hidden `<iframe>`.
+> Check `page.frames` in the log output — the driver needs to target the correct frame.
+
+---
+
+#### Step 2 — Create the driver file
 
 ```python
 # wifi_optimizer/routers/my_router.py
-from wifi_optimizer.routers.base import BaseRouter
+"""
+Driver for <Router Brand> <Model> — <ISP, Country>.
+
+Confirmed selectors (firmware version X.Y.Z):
+  Login:     #username, #password, #loginBtn
+  Channel:   select#ch_2g (2.4 GHz), select#ch_5g (5 GHz)
+  Apply:     #btnApply
+"""
+from __future__ import annotations
+import logging
+from playwright.sync_api import sync_playwright
+from .base import BaseRouter
+
+log = logging.getLogger(__name__)
+
 
 class MyRouter(BaseRouter):
 
     def read_channels(self) -> tuple[int | None, int | None]:
-        # Log in, read #channel-2g and #channel-5g dropdowns, return (ch24, ch5)
-        ...
+        ch24 = ch5 = None
+        try:
+            with sync_playwright() as p:
+                page = self._open(p)
+                self._login(page)
 
-    def apply_channels(self, channel_24, channel_5, *, headed=False) -> None:
-        # Log in, set dropdowns, click Apply
-        ...
+                # Navigate to Wi-Fi settings
+                page.click("#wifiMenu")
+                page.wait_for_timeout(1_500)
+
+                # Read 2.4 GHz channel
+                ch24 = int(page.locator("select#ch_2g").input_value())
+                log.info("Current 2.4 GHz channel: ch%s", ch24)
+
+                # Read 5 GHz channel
+                ch5 = int(page.locator("select#ch_5g").input_value())
+                log.info("Current 5 GHz channel: ch%s", ch5)
+
+                page.context.browser.close()
+        except Exception as exc:
+            log.warning("Could not read channels: %s", exc)
+        return ch24, ch5
+
+    def apply_channels(
+        self,
+        channel_24: int | None,
+        channel_5:  int | None,
+        *,
+        headed: bool = False,
+    ) -> None:
+        if channel_24 is None and channel_5 is None:
+            return
+        try:
+            with sync_playwright() as p:
+                page = self._open(p, headless=not headed)
+                self._login(page)
+
+                page.click("#wifiMenu")
+                page.wait_for_timeout(1_500)
+
+                if channel_24 is not None:
+                    page.locator("select#ch_2g").select_option(str(channel_24))
+                    log.info("2.4 GHz → ch%s", channel_24)
+
+                if channel_5 is not None:
+                    page.locator("select#ch_5g").select_option(str(channel_5))
+                    log.info("5 GHz → ch%s", channel_5)
+
+                page.click("#btnApply")
+                page.wait_for_timeout(3_000)   # wait for radio restart
+                page.context.browser.close()
+        except Exception as exc:
+            log.error("Router automation error: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _open(self, p, *, headless: bool = True):
+        browser = p.chromium.launch(headless=headless)
+        page    = browser.new_context(ignore_https_errors=True).new_page()
+        page.set_default_timeout(20_000)
+        return page
+
+    def _login(self, page) -> None:
+        page.goto(self.url, wait_until="domcontentloaded")
+        page.wait_for_selector("#username", state="visible", timeout=10_000)
+        page.fill("#username", self.username)
+        page.fill("#password", self.password)
+        page.click("#loginBtn")
+        # Wait for a known post-login element instead of networkidle —
+        # most router UIs have constant JS polling that prevents networkidle.
+        page.wait_for_selector("#wifiMenu", state="visible", timeout=15_000)
+        log.info("Login successful.")
 ```
 
-### 2 — Register it in `main.py`
+> **Important:** avoid `wait_for_load_state("networkidle")` — router admin UIs
+> almost always have background JS polling that prevents this state from firing.
+> Instead, `wait_for_selector` on a known post-login element.
+
+---
+
+#### Step 3 — Register the driver in `main.py`
 
 ```python
-from wifi_optimizer.routers.my_router import MyRouter
+# main.py
+from wifi_optimizer.routers.my_router import MyRouter   # ← add import
 
 ROUTER_DRIVERS = {
     "huawei_hg8145x6": HuaweiHG8145X6,
-    "my_router":        MyRouter,       # ← add this line
+    "my_router":        MyRouter,                        # ← add entry
 }
 ```
 
-### 3 — Select it in `.env`
+#### Step 4 — Select it in `.env`
 
 ```dotenv
 ROUTER_DRIVER=my_router
+ROUTER_URL=http://192.168.1.1
+ROUTER_USER=admin
+ROUTER_PASS=your_password
 ```
 
-### 4 — Document it in `README.md`
+#### Step 5 — Test it
 
-Add a row to the **Router compatibility** table and list your confirmed HTML selectors.
+```bash
+# Verify read_channels works
+python main.py --once --dry-run
 
-> Use `python main.py --inspect` to open a headed browser session and discover the selectors for your router's admin UI.
+# Verify apply_channels works (visible browser)
+python main.py --inspect
+```
+
+#### Step 6 — Document your selectors in `README.md`
+
+Add a row to the **Router compatibility** table below and list your confirmed selectors in a new sub-section. This helps other users with the same router/ISP.
+
+---
+
+### Common pitfalls
+
+| Problem | Likely cause | Fix |
+|---|---|---|
+| Login button not found | Multiple buttons in DOM, only one visible | Use `.nth(1)` or `.filter()` to target the visible one |
+| Channel dropdown not found | Panel loads inside an `<iframe>` | Iterate `page.frames` and target the frame that contains the dropdown |
+| Timeout after login | Router never reaches `networkidle` due to JS polling | Use `wait_for_selector` on a known post-login element instead |
+| Apply does nothing | Submit fires JS, not a real form submit | Use `page.click("#applyBtn")` — avoid `page.evaluate("form.submit()")` |
+| Radio restarts and connection drops | Expected behaviour after channel change | Wrap the post-apply wait in `try/except` and log it as informational |
 
 ---
 
