@@ -206,3 +206,19 @@ WifiChannelOptimizer/
 ## 📜 License
 
 MIT
+
+
+## ☕ Apoya el proyecto / Support the project
+
+Si este script te ayudó a estabilizar tu conexión, bajar el ping o simplemente te ahorró el dolor de cabeza de configurar el router manualmente, considera apoyarme para seguir mejorando esta herramienta y agregar soporte a más modelos.
+
+### 🇨🇱 Para Chile (Webpay / Débito / Crédito)
+Puedes realizar una donación de monto abierto a través de **Flow**:
+[![Flow Pago](https://img.shields.io/badge/Donar_vía-Flow-00c0f3?style=for-the-badge&logo=opsgenie&logoColor=white)](https://www.flow.cl/btn.php?token=b7cbabd1861bcf3cbbb6bf9b8cf05af15cce8fc)
+
+### 🌎 International (PayPal / Credit Card)
+Support the development via **Buy Me a Coffee**:
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/matiasmlforever)
+
+---
+> **Tip:** También puedes usar el botón **Sponsor** en la parte superior de este repositorio para donaciones recurrentes vía GitHub Sponsors.
