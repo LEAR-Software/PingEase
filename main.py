@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
 from wifi_optimizer.optimizer import run_optimization_cycle
-from wifi_optimizer.monitor   import run_monitor
+from wifi_optimizer.monitor import run_monitor
 from wifi_optimizer.routers.huawei_hg8145x6 import HuaweiHG8145X6
 
 # ---------------------------------------------------------------------------
@@ -76,11 +76,30 @@ def _build_router():
 
 
 def _get_int_arg(args: list[str], flag: str, *, default: int | None) -> int | None:
-    """Return the integer value following `flag` in args, or `default`."""
-    try:
-        return int(args[args.index(flag) + 1])
-    except (ValueError, IndexError):
+    """Return the integer value following `flag` in args, or `default` if `flag` is absent.
+
+    If `flag` is present but missing a value or has a non-integer value,
+    log an error and exit with a non-zero status code.
+    """
+    # Flag not provided at all: use the default as-is.
+    if flag not in args:
         return default
+
+    index = args.index(flag)
+
+    # Flag present but no value after it: treat as a CLI error.
+    try:
+        value_str = args[index + 1]
+    except IndexError:
+        log.error("Flag %s requires an integer value.", flag)
+        sys.exit(1)
+
+    # Flag present with a value that is not an integer: also a CLI error.
+    try:
+        return int(value_str)
+    except ValueError:
+        log.error("Invalid value for %s: %r (expected integer).", flag, value_str)
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------

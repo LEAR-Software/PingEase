@@ -1,4 +1,4 @@
-﻿"""
+"""
 wifi_optimizer/monitor.py
 
 RF Environment Monitor — independent from the optimizer.
@@ -116,13 +116,13 @@ def run_monitor(
             log.warning("Scan failed: %s", exc)
             networks = []
 
+        scan_count += 1
         if networks:
             _persist(db_path, ts, networks)
             total_snapshots += len(networks)
-            scan_count += 1
             _print_snapshot_summary(ts, networks, scan_count, total_snapshots)
         else:
-            log.warning("[%s] No networks detected.", ts)
+            log.warning("[Scan #%d | %s] No networks detected.", scan_count, ts)
 
         # Sleep in short chunks so Ctrl+C is responsive
         sleep_end = time.monotonic() + interval_seconds
@@ -193,7 +193,7 @@ def _print_snapshot_summary(
     )
     for net in sorted(networks, key=lambda n: n["channel"]):
         log.info(
-            "  Ch%3d (%s GHz)  %-32s  %s  %d dBm",
+            "  Ch%3d (%s GHz)  %-32s  %s  %.1f dBm",
             net["channel"],
             _band(net["channel"]),
             net["ssid"][:32] or "(hidden)",
