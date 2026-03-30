@@ -141,6 +141,7 @@ python main.py --inspect
 | `ROUTER_URL` | `http://192.168.100.1` | Router admin panel URL |
 | `ROUTER_USER` | `admin` | Admin username |
 | `ROUTER_PASS` | `admin` | Admin password |
+| `ROUTER_DRIVER` | `huawei_hg8145x6` | Router automation driver key (see [Adding a new router](#adding-a-new-router-model)) |
 | `SCAN_INTERVAL_SECONDS` | `300` | Seconds between daemon scans |
 | `TRIAL_PERIOD_SECONDS` | `300` | Seconds after a channel change before quality is evaluated. 5 min is enough to stabilize without ruining a full match. |
 | `PING_DEGRADATION_MS` | `20` | Gateway RTT increase (ms) that triggers a revert. 20 ms is perceptible in competitive gaming. |
@@ -191,15 +192,69 @@ Every run appends to `wifi_optimizer.log`:
 
 ```
 WifiChannelOptimizer/
-├── main.py              # All logic (scanner, decision, Playwright automation)
-├── .env.example         # Config template — copy to .env and fill in
-├── .env                 # Your local credentials (git-ignored)
-├── pyproject.toml       # Project metadata and dependencies
-├── PROMPT.md            # Agent instructions & business rules specification
+├── main.py                        # Entry point — config loading, driver selection, daemon loop
+├── wifi_optimizer/
+│   ├── scanner.py                 # Phase 1: netsh Wi-Fi scan + dBm conversion
+│   ├── decision.py                # Phase 2: congestion scoring, hysteresis, channel selection
+│   ├── quality.py                 # Gaming metrics: gateway RTT, jitter, download speed
+│   ├── optimizer.py               # Core cycle: ties scanner + decision + quality + router together
+│   └── routers/
+│       ├── base.py                # BaseRouter ABC — the contract every driver must implement
+│       └── huawei_hg8145x6.py    # Concrete driver for Huawei HG8145X6 (Entel, Chile)
+├── .env.example                   # Config template — copy to .env and fill in
+├── .env                           # Your local credentials (git-ignored)
+├── pyproject.toml                 # Project metadata and dependencies
+├── PROMPT.md                      # Agent instructions & business rules specification
 ├── .gitignore
 ├── README.md
-└── wifi_optimizer.log   # Runtime log (git-ignored)
+└── wifi_optimizer.log             # Runtime log (git-ignored)
 ```
+
+---
+
+## 🔌 Adding a new router model
+
+The optimizer core never talks to the router directly — it only calls the `BaseRouter` interface. Adding support for a new model is isolated to a single file:
+
+### 1 — Create the driver
+
+```python
+# wifi_optimizer/routers/my_router.py
+from wifi_optimizer.routers.base import BaseRouter
+
+class MyRouter(BaseRouter):
+
+    def read_channels(self) -> tuple[int | None, int | None]:
+        # Log in, read #channel-2g and #channel-5g dropdowns, return (ch24, ch5)
+        ...
+
+    def apply_channels(self, channel_24, channel_5, *, headed=False) -> None:
+        # Log in, set dropdowns, click Apply
+        ...
+```
+
+### 2 — Register it in `main.py`
+
+```python
+from wifi_optimizer.routers.my_router import MyRouter
+
+ROUTER_DRIVERS = {
+    "huawei_hg8145x6": HuaweiHG8145X6,
+    "my_router":        MyRouter,       # ← add this line
+}
+```
+
+### 3 — Select it in `.env`
+
+```dotenv
+ROUTER_DRIVER=my_router
+```
+
+### 4 — Document it in `README.md`
+
+Add a row to the **Router compatibility** table and list your confirmed HTML selectors.
+
+> Use `python main.py --inspect` to open a headed browser session and discover the selectors for your router's admin UI.
 
 ---
 
