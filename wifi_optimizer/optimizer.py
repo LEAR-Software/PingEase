@@ -25,56 +25,72 @@ def run_optimization_cycle(
     *,
     dry_run: bool  = False,
     headed:  bool  = False,
-    trial_period_seconds:  int   = 300,
-    ping_threshold_ms:     int   = 20,
-    jitter_threshold_ms:   int   = 15,
-    speed_drop_pct:        float = 0.40,
-    hysteresis_threshold:  float = 0.40,
-    change_cooldown_seconds: int = 3600,
-    optimal_windows_path: Path  = WINDOWS_PATH,
+    trial_period_seconds:        int   = 300,
+    ping_threshold_ms:           int   = 20,
+    jitter_threshold_ms:         int   = 15,
+    speed_drop_pct:              float = 0.40,
+    hysteresis_threshold:        float = 0.40,
+    change_cooldown_seconds:     int   = 3600,
+    optimal_windows_path:        Path  = WINDOWS_PATH,
+    baseline_good_ping_ms:       int   = 15,
+    baseline_good_jitter_ms:     int   = 5,
+    # Emergency mode — active outside optimal windows
+    emergency_ping_ms:           int   = 80,
+    emergency_jitter_ms:         int   = 50,
+    emergency_hysteresis:        float = 0.80,
+    emergency_cooldown_seconds:  int   = 7200,
 ) -> None:
     """
-    One full optimization cycle:
-      0. Check optimal window — if optimal_windows.json exists and the current
-         hour is outside the allowed windows, skip the cycle entirely
-      1. Scan the RF environment (always — cheap, uses only netsh)
-      2. Check change cooldown — skip router interaction if last change
-         was less than change_cooldown_seconds ago
-      3. Compute congestion scores and select the best channel per band
-      4. Skip if the improvement is within the hysteresis window
-      5. Measure baseline quality (gateway RTT, jitter, download speed)
-      6. Apply the new channels via the router driver
-      7. Launch a background thread to monitor quality and revert if degraded
+    One full optimization cycle. Behaviour depends on whether the current
+    hour falls inside or outside the high-congestion optimal windows:
+
+    NORMAL mode (inside optimal window or no window file):
+      0.  Window check — confirm we are in a high-congestion hour
+      1.  RF scan
+      2.  Cooldown check (change_cooldown_seconds)
+      2.5 Baseline guard — skip if connection is already good
+          (ping ≤ baseline_good_ping_ms AND jitter ≤ baseline_good_jitter_ms)
+      3.  Score channels, apply hysteresis_threshold
+      4.  Apply + launch revert monitor
+
+    EMERGENCY mode (outside optimal window, e.g. gaming hours):
+      Acts only when the signal has degraded severely enough to ruin a session.
+      Uses much stricter thresholds to avoid unnecessary interruptions:
+      1.  RF scan
+      2.  Emergency cooldown check (emergency_cooldown_seconds — longer)
+      2.5 Emergency baseline guard — only proceed if ping > emergency_ping_ms
+          OR jitter > emergency_jitter_ms (connection is already bad)
+      3.  Score channels, apply emergency_hysteresis (much higher threshold)
+      4.  Apply + launch revert monitor
 
     state keys:
-        current_24 (int|None)   — active 2.4 GHz channel
-        current_5  (int|None)   — active 5 GHz channel
-        last_change_ts (float)  — monotonic timestamp of last router change
+        current_24 (int|None)          — active 2.4 GHz channel
+        current_5  (int|None)          — active 5 GHz channel
+        last_change_ts (float)         — monotonic ts of last router change
+        last_emergency_change_ts (float) — monotonic ts of last emergency change
     """
     log.info("─" * 60)
     log.info("Optimization cycle started — %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    # Step 0 — Optimal window check (optional — only when file exists)
+    # Step 0 — Determine operating mode
     optimal_hours = load_optimal_hours(optimal_windows_path)
+    emergency_mode = False
+
     if optimal_hours is not None:
         current_hour = datetime.now().hour
         if current_hour not in optimal_hours:
-            next_window = next(
-                (h for h in sorted(optimal_hours) if h > current_hour),
-                sorted(optimal_hours)[0],   # wraps to next day
-            )
+            # Outside high-congestion window → switch to emergency mode
+            emergency_mode = True
             log.info(
-                "Outside optimal window (current hour: %02d:00, "
-                "optimal hours: %s). Next window: %02d:00. Skipping.",
+                "Outside optimal window (%02d:00) — EMERGENCY mode active. "
+                "Will only act on severe signal degradation.",
                 current_hour,
-                ", ".join(f"{h:02d}:00" for h in sorted(optimal_hours)),
-                next_window,
             )
-            return
-        log.info(
-            "Within optimal window (%02d:00 ✅). Proceeding with cycle.",
-            current_hour,
-        )
+        else:
+            log.info(
+                "Within optimal window (%02d:00 ✅) — NORMAL mode.",
+                current_hour,
+            )
 
     # Step 1 — RF scan (no router interaction)
     networks = scan_wifi_networks()
@@ -85,26 +101,73 @@ def run_optimization_cycle(
     log.info("Networks detected: %d", len(networks))
     log_interference_heatmap(networks)
 
-    # Step 2 — Cooldown check (before touching the router)
-    last_change = state.get("last_change_ts", 0.0)
-    elapsed     = time.monotonic() - last_change
-    remaining   = change_cooldown_seconds - elapsed
+    # Step 2 — Cooldown check (uses separate tracker in emergency mode)
+    if emergency_mode:
+        last_change = state.get("last_emergency_change_ts", 0.0)
+        cooldown    = emergency_cooldown_seconds
+    else:
+        last_change = state.get("last_change_ts", 0.0)
+        cooldown    = change_cooldown_seconds
+
+    elapsed   = time.monotonic() - last_change
+    remaining = cooldown - elapsed
     if remaining > 0 and last_change > 0.0:
         log.info(
-            "Change cooldown active — last change was %.0f min ago, "
+            "%s cooldown active — last change %.0f min ago, "
             "next allowed in %.0f min. Scan-only cycle.",
+            "Emergency" if emergency_mode else "Change",
             elapsed / 60, remaining / 60,
         )
         return
 
+    # Step 2.5 — Baseline quality guard
+    log.info("Measuring baseline quality…")
+    baseline   = measure_quality(router.gateway_host)
+    ping_now   = baseline.get("ping_gw_ms") or 0.0
+    jitter_now = baseline.get("jitter_ms")  or 0.0
+    log.info(
+        "Wi-Fi quality → gateway ping: %.1f ms  jitter: %.1f ms  speed: %s Mbps",
+        ping_now, jitter_now,
+        f"{baseline.get('speed_mbps'):.2f}" if baseline.get("speed_mbps") else "N/A",
+    )
+
+    if emergency_mode:
+        # Emergency: only act if signal is SEVERELY degraded
+        if ping_now <= emergency_ping_ms and jitter_now <= emergency_jitter_ms:
+            log.info(
+                "Emergency mode — signal acceptable "
+                "(ping %.1f ms ≤ %d ms, jitter %.1f ms ≤ %d ms). "
+                "Not worth interrupting — skipping.",
+                ping_now, emergency_ping_ms,
+                jitter_now, emergency_jitter_ms,
+            )
+            return
+        log.warning(
+            "Emergency mode — severe degradation detected "
+            "(ping %.1f ms, jitter %.1f ms). Evaluating channel change…",
+            ping_now, jitter_now,
+        )
+        active_hysteresis = emergency_hysteresis
+    else:
+        # Normal: skip if connection is already good
+        if ping_now <= baseline_good_ping_ms and jitter_now <= baseline_good_jitter_ms:
+            log.info(
+                "Baseline already good (ping %.1f ms ≤ %d ms, "
+                "jitter %.1f ms ≤ %d ms). Skipping.",
+                ping_now, baseline_good_ping_ms,
+                jitter_now, baseline_good_jitter_ms,
+            )
+            return
+        active_hysteresis = hysteresis_threshold
+
     # Step 3 — Scoring and decision
     best_24, change_24 = best_channel(
         networks, "2.4", state["current_24"],
-        hysteresis_threshold=hysteresis_threshold,
+        hysteresis_threshold=active_hysteresis,
     )
     best_5, change_5 = best_channel(
         networks, "5", state["current_5"],
-        hysteresis_threshold=hysteresis_threshold,
+        hysteresis_threshold=active_hysteresis,
     )
 
     apply_24 = best_24 if change_24 else None
@@ -114,10 +177,7 @@ def run_optimization_cycle(
         log.info("Already on optimal channels (or within hysteresis). No changes.")
         return
 
-    # Step 4 — Baseline quality
-    log.info("Measuring baseline quality before channel change…")
-    baseline = measure_quality(router.gateway_host)
-
+    # baseline already measured in Step 2.5
     prev_24, prev_5 = state["current_24"], state["current_5"]
 
     if dry_run:
@@ -130,7 +190,11 @@ def run_optimization_cycle(
 
     # Step 5 — Apply
     router.apply_channels(apply_24, apply_5, headed=headed)
-    state["last_change_ts"] = time.monotonic()
+    ts_now = time.monotonic()
+    if emergency_mode:
+        state["last_emergency_change_ts"] = ts_now
+    else:
+        state["last_change_ts"] = ts_now
 
     if apply_24:
         state["current_24"] = apply_24

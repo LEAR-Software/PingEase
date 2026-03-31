@@ -1,8 +1,18 @@
 ﻿"""
 wifi_optimizer/analyzer.py
 
-RF Window Analyzer — reads wifi_monitor.db, identifies the least-congested
+RF Window Analyzer — reads wifi_monitor.db, identifies the MOST-congested
 hours of the day, and writes optimal_windows.json for the optimizer to use.
+
+Rationale:
+    The optimizer should act when there IS congestion to escape from.
+    During low-congestion hours the connection is already good — changing
+    channels there is unnecessary and risks degrading a working setup
+    (confirmed by 3 real reverts that all happened with a good baseline).
+
+    During high-congestion hours, neighbouring networks occupy certain
+    channels heavily, so switching to a less-populated channel yields a
+    real, measurable improvement in ping and jitter.
 
 Flow:
     python main.py --monitor   →  accumulates data in wifi_monitor.db
@@ -15,10 +25,10 @@ optimal_windows.json schema:
         "based_on_scans": 4287,
         "tz_offset_hours": -3,
         "top_n": 8,
-        "optimal_hours": [15, 12, 17, 19, 13, 16, 14, 20],
+        "optimal_hours": [2, 3, 4, 7, 1, 0, 6, 10],   ← most congested hours
         "ranking": [
-            {"rank": 1, "hour": 15, "combined_score": -36712.0,
-             "score_24ghz": -27071.5, "score_5ghz": -9640.5},
+            {"rank": 1, "hour": 2, "combined_score": -128941.5,
+             "score_24ghz": -94617.0, "score_5ghz": -34324.5},
             ...
         ]
     }
@@ -51,11 +61,16 @@ def run_analyze(
     """
     Analyse congestion patterns in `db_path` and write `out_path`.
 
+    Selects the top_n MOST-congested hours — those are the hours where
+    interference is highest and switching to a cleaner channel yields a
+    real improvement. During quiet hours the connection is already good
+    and unnecessary changes risk degrading a working setup.
+
     Args:
         db_path:   SQLite database produced by --monitor.
         out_path:  Output JSON file consumed by the optimizer.
         tz_offset: UTC offset for local time display (default: -3 for Chile).
-        top_n:     Number of least-congested hours to include in the window.
+        top_n:     Number of most-congested hours to include in the window.
     """
     if not db_path.exists():
         log.error(
@@ -77,6 +92,7 @@ def run_analyze(
     ranking = _compute_ranking(con, tz_offset)
     con.close()
 
+    # Top-N most congested = first N entries (most negative scores first)
     optimal_hours = [r["hour"] for r in ranking[:top_n]]
 
     payload = {
@@ -116,7 +132,10 @@ def load_optimal_hours(path: Path = WINDOWS_PATH) -> list[int] | None:
 def _compute_ranking(con: sqlite3.Connection, tz_offset: int) -> list[dict]:
     """
     Compute combined 2.4+5 GHz congestion score per local hour, ranked
-    from least congested (best for optimizer) to most congested.
+    from MOST congested to least congested.
+
+    Most negative score = most congested = best time for the optimizer to act,
+    because there is real interference to escape from by switching channels.
     """
     rows = con.execute(f"""
         WITH congestion_by_hour AS (
@@ -142,7 +161,7 @@ def _compute_ranking(con: sqlite3.Connection, tz_offset: int) -> list[dict]:
             ROUND(score_24, 1)        AS score_24,
             ROUND(score_5,  1)        AS score_5
         FROM combined
-        ORDER BY combined_score DESC   -- less negative first = less congested
+        ORDER BY combined_score ASC    -- most negative first = most congested
     """).fetchall()
 
     return [
@@ -166,7 +185,8 @@ def _print_summary(
     tz_label = f"UTC{tz_offset:+d}"
     print(f"\n{'='*70}")
     print(f"  RF WINDOW ANALYSIS  ({tz_label})")
-    print(f"  Top {top_n} least-congested hours → written to optimal_windows.json")
+    print(f"  Top {top_n} MOST-congested hours → optimizer will act during these")
+    print(f"  (most interference = most to gain by switching to a cleaner channel)")
     print(f"{'='*70}")
     print(f"  {'Rank':>4} | {'Hour':>5} | {'Combined':>10} | {'2.4 GHz':>10} | {'5 GHz':>10} |")
     print(f"  {'-'*62}")
@@ -175,9 +195,10 @@ def _print_summary(
     min_s, max_s = min(scores), max(scores)
 
     for r in ranking:
+        # norm=1 → most congested (most negative), norm=0 → least congested
         norm   = (r["combined_score"] - max_s) / (min_s - max_s) if min_s != max_s else 0
         bar    = chr(0x2588) * int(norm * 10)
-        window = "  ✅ OPTIMAL" if r["hour"] in optimal_hours else ""
+        window = "  ✅ ACT HERE" if r["hour"] in optimal_hours else ""
         print(
             f"  {r['rank']:>4} | {r['hour']:02d}:00 | "
             f"{r['combined_score']:>10.1f} | "
@@ -186,6 +207,7 @@ def _print_summary(
             f"{bar:<10}{window}"
         )
 
-    print(f"\n  Optimizer will ONLY act during: "
+    print(f"\n  Optimizer will act during (high-congestion windows): "
           f"{', '.join(f'{h:02d}:00' for h in sorted(optimal_hours))}")
+    print(f"  Low-congestion hours are SKIPPED — connection is already good there.")
     print(f"  To disable window restriction: delete optimal_windows.json\n")

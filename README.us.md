@@ -219,6 +219,8 @@ With the default configuration, in the worst case you lose connectivity for **10
 | `PING_DEGRADATION_MS` | `20` | Gateway RTT increase (ms) that triggers a revert. 20 ms is perceptible in competitive gaming. |
 | `JITTER_DEGRADATION_MS` | `15` | Jitter increase (ms) that triggers a revert. 15 ms of extra jitter causes rubber-banding in most games. |
 | `SPEED_DEGRADATION_PCT` | `0.40` | Download speed drop fraction that triggers a revert (secondary, non-gaming signal). |
+| `BASELINE_GOOD_PING_MS` | `15` | If gateway ping is below this value **and** jitter is also good, the connection is already healthy — optimizer skips the cycle. Prevents unnecessary changes when the signal is already optimal. |
+| `BASELINE_GOOD_JITTER_MS` | `5` | Jitter threshold for the baseline guard. Both conditions (ping AND jitter) must be met to skip. |
 
 ---
 
@@ -358,7 +360,8 @@ ORDER BY hour;
 -- Optimal hourly windows to run the optimizer
 -- (local time = UTC + TZ_OFFSET; adjust offset for your timezone)
 -- Combined score: sum of dBm across 2.4 GHz + 5 GHz per hour
--- Less negative = less congestion = better time to act
+-- MORE negative = more congested = better time to act
+-- (real interference present → there is a cleaner channel to switch to)
 -- ─────────────────────────────────────────────────────────────────
 WITH tz_offset AS (SELECT -3 AS offset),   -- Chile (UTC-3); change as needed
 
@@ -387,7 +390,7 @@ SELECT
     ROUND(combined_score, 1)            AS combined_score,
     ROUND(score_24, 1)                  AS score_24ghz,
     ROUND(score_5,  1)                  AS score_5ghz,
-    RANK() OVER (ORDER BY combined_score DESC) AS ranking
+    RANK() OVER (ORDER BY combined_score ASC) AS ranking  -- most negative = rank 1
 FROM combined
 ORDER BY ranking;
 ```
@@ -396,14 +399,14 @@ ORDER BY ranking;
 >
 > | Rank | Hour | Note |
 > |---|---|---|
-> | 🥇 1 | **15:00** | Lowest combined congestion of the day |
-> | 🥈 2 | **12:00** | Second best window |
-> | 🥉 3 | **17:00** | Third best window |
-> | — | 02:00–04:00 | **Worst time** — peak overnight congestion |
+> | 🥇 1 | **02:00** | Highest congestion of the day — best window to act |
+> | 🥈 2 | **04:00** | Second most congested |
+> | 🥉 3 | **03:00** | Third most congested |
+> | — | 12:00–21:00 | **Quiet hours** — connection is already good, skip |
 >
-> The **12:00–21:00 Chile** window consistently shows the least congested hours.
-> The congestion peak occurs between **02:00 and 07:00** (overnight), likely due to
-> devices with automated schedules that activate when human-generated interference drops.
+> The **02:00–10:00 Chile** window has the highest RF congestion.
+> Those are the hours where switching to a less-populated channel yields a real,
+> measurable improvement in ping and jitter.
 
 ---
 

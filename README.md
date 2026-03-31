@@ -218,7 +218,8 @@ Con la configuración por defecto, en el peor caso pierdes conexión **10 segund
 | `TRIAL_PERIOD_SECONDS` | `300` | Segundos de espera tras un cambio de canal antes de evaluar la calidad. 5 min es suficiente para estabilizarse sin arruinar una partida. |
 | `PING_DEGRADATION_MS` | `20` | Aumento de RTT al gateway (ms) que activa una reversión. 20 ms es perceptible en gaming competitivo. |
 | `JITTER_DEGRADATION_MS` | `15` | Aumento de jitter (ms) que activa una reversión. 15 ms extra causa rubber-banding en la mayoría de los juegos. |
-| `SPEED_DEGRADATION_PCT` | `0.40` | Caída de velocidad de descarga que activa una reversión (señal secundaria, no relevante para gaming). |
+| `BASELINE_GOOD_PING_MS` | `15` | Si el ping al gateway está por debajo de este valor **y** el jitter también está bien, la conexión ya es buena — no hay nada que mejorar. El optimizer se saltea el ciclo. Evita cambios innecesarios cuando la señal ya es óptima. |
+| `BASELINE_GOOD_JITTER_MS` | `5` | Umbral de jitter para la guardia de baseline. Ambas condiciones (ping Y jitter) deben cumplirse para saltearse. |
 
 ---
 
@@ -292,18 +293,27 @@ WifiChannelOptimizer/
 
 ## 🔄 Flujo completo: monitor → analizar → optimizar
 
-Este es el flujo recomendado para minimizar los cambios al router ejecutando el optimizer **solo cuando el entorno RF favorece el cambio**.
+Este es el flujo recomendado para que el optimizer actúe **solo cuando tiene sentido hacerlo**.
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌──────────────────────┐
 │  --monitor      │────▶│  --analyze       │────▶│  (daemon / --once)   │
 │                 │     │                  │     │                      │
-│  wifi_monitor   │     │  lee la DB       │     │  si existe           │
-│  .db            │     │  escribe         │     │  optimal_windows     │
-│  (SQLite)       │     │  optimal_windows │     │  .json → solo actúa  │
-│                 │     │  .json           │     │  en esas horas       │
+│  wifi_monitor   │     │  identifica las  │     │  Step 0: ¿estamos    │
+│  .db (SQLite)   │     │  horas de MAYOR  │     │  en hora de alta     │
+│                 │     │  congestión →    │     │  congestión? Si no   │
+│                 │     │  optimal_windows │     │  → skip              │
+│                 │     │  .json           │     │  Step 2.5: ¿baseline │
+│                 │     │                  │     │  ya es bueno? → skip │
 └─────────────────┘     └──────────────────┘     └──────────────────────┘
 ```
+
+> **¿Por qué actuar en horas de ALTA congestión?**
+> Cuando hay mucha interferencia en el canal actual, cambiar a uno menos poblado
+> produce una mejora real y medible. En horas tranquilas la conexión ya está bien
+> — cambiar de canal ahí es innecesario y puede empeorar lo que funciona.
+> Esto está validado empíricamente: los 3 reverts del log ocurrieron exactamente
+> en ciclos donde el baseline previo ya era bueno (ping < 30 ms, jitter < 26 ms).
 
 ### Paso 1 — Acumular datos (24–48 h mínimo recomendado)
 
@@ -319,19 +329,34 @@ Cuantos más días de datos, más representativo el análisis. Sin datos de fine
 python main.py --analyze --tz-offset -3 --top-n 8
 ```
 
-Genera `optimal_windows.json` con las 8 horas menos congestionadas. El archivo incluye el ranking completo de las 24 horas con scores por banda.
+Genera `optimal_windows.json` con las **8 horas más congestionadas** del día. Son las horas donde hay más interferencia de vecinos — y por lo tanto más que ganar al cambiar a un canal libre.
 
 ### Paso 3 — Ejecutar el optimizer
 
 ```bash
-python main.py          # daemon — escanea siempre, actúa solo en ventanas óptimas
+python main.py          # daemon — escanea siempre, actúa solo en ventanas de alta congestión
 ```
 
-Si `optimal_windows.json` existe, el optimizer lo lee en cada ciclo. Si la hora actual no está en la lista, el ciclo termina sin tocar el router:
+El optimizer aplica dos filtros antes de tocar el router:
 
 ```
-[INFO] Outside optimal window (current hour: 03:00, optimal hours: 12:00, 13:00, ...). Next window: 12:00. Skipping.
-[INFO] Within optimal window (15:00 ✅). Proceeding with cycle.
+Step 0:   ¿Estamos en una hora de alta congestión? (según optimal_windows.json)
+          Si no → skip. La conexión probablemente está bien.
+
+Step 2.5: ¿El baseline actual es ping ≤ 15 ms Y jitter ≤ 5 ms?
+          Si sí → skip. La conexión ya es buena, no hay nada que mejorar.
+
+Si pasa ambos filtros → evalúa canales y aplica si la mejora RF ≥ 40%.
+```
+
+```
+[INFO] Within optimal window (03:00 ✅). Proceeding with cycle.
+[INFO] Wi-Fi quality → gateway ping: 45.0 ms  jitter: 28.0 ms  → PROCEDE
+[INFO] 2.4 GHz — improvement: 91.9% (threshold 40%) → CHANGE
+
+[INFO] Within optimal window (03:00 ✅). Proceeding with cycle.
+[INFO] Wi-Fi quality → gateway ping: 4.0 ms  jitter: 1.6 ms
+[INFO] Baseline already good (ping 4.0 ms ≤ 15 ms, jitter 1.6 ms ≤ 5 ms). Skipping.
 ```
 
 ### Desactivar la restricción de ventana
@@ -416,7 +441,8 @@ ORDER BY hour;
 -- Ventanas horarias óptimas para ejecutar el optimizador
 -- (hora local Chile = UTC-3, ajustar TZ_OFFSET según tu zona)
 -- Score combinado: suma de dBm en 2.4 GHz + 5 GHz por hora
--- Menos negativo = menos congestión = mejor momento para actuar
+-- MÁS negativo = más congestionado = mejor momento para actuar
+-- (hay interferencia real → hay canal libre al que escapar)
 -- ─────────────────────────────────────────────────────────────────
 WITH tz_offset AS (SELECT -3 AS offset),   -- Chile (UTC-3)
 
@@ -445,7 +471,7 @@ SELECT
     ROUND(combined_score, 1)            AS score_combinado,
     ROUND(score_24, 1)                  AS score_24ghz,
     ROUND(score_5,  1)                  AS score_5ghz,
-    RANK() OVER (ORDER BY combined_score DESC) AS ranking
+    RANK() OVER (ORDER BY combined_score ASC) AS ranking  -- más negativo = rank 1
 FROM combined
 ORDER BY ranking;
 ```
@@ -454,14 +480,13 @@ ORDER BY ranking;
 >
 > | Rank | Hora | Observación |
 > |---|---|---|
-> | 🥇 1 | **15:00** | Menor congestión combinada del día |
-> | 🥈 2 | **12:00** | Segunda mejor ventana |
-> | 🥉 3 | **17:00** | Tercera mejor ventana |
-> | — | 02:00–04:00 | **Peor momento** — máxima congestión nocturna |
+> | 🥇 1 | **02:00** | Mayor congestión del día — mejor ventana para actuar |
+> | 🥈 2 | **04:00** | Segunda más congestionada |
+> | 🥉 3 | **03:00** | Tercera más congestionada |
+> | — | 12:00–21:00 | **Horas tranquilas** — conexión ya está bien, no cambiar |
 >
-> La franja **12:00–21:00 hora Chile** concentra sistemáticamente las horas menos congestionadas.
-> El peak de congestión ocurre de **02:00 a 07:00** (madrugada), probablemente por dispositivos con
-> schedules automáticos activos cuando baja la interferencia humana.
+> La franja **02:00–10:00 hora Chile** concentra la mayor congestión RF.
+> Son las horas donde cambiar a un canal menos poblado produce una mejora real.
 
 ---
 
