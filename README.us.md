@@ -331,6 +331,17 @@ ORDER BY avg_dbm ASC
 LIMIT 5;
 ```
 
+```sql
+-- Unique active networks per hour of the day
+-- SQL equivalent of: df.groupby("hour")["bssid"].nunique()
+SELECT
+    CAST(strftime('%H', ts) AS INTEGER)  AS hour,
+    COUNT(DISTINCT bssid)                AS unique_networks
+FROM snapshots
+GROUP BY hour
+ORDER BY hour;
+```
+
 ---
 
 ## 🔌 Adding a new router model
