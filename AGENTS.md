@@ -4,7 +4,54 @@
 
 ---
 
-## 📍 Sesión 2026-04-14 (ÚLTIMA - En Progreso)
+## 📍 Sesión 2026-04-14 (ÚLTIMA - Definición Transversal Open-Core/Premium)
+
+### 🎯 Objetivo
+Definir el modelo operativo dual-repo (open-core + premium), documentarlo en plantillas/playbook, y dejar lista la carga de issues/proyectos en GitHub.
+
+### ✅ Completado
+- Se validó operación transversal entre `LEAR-Software/PingEase` y `LEAR-Software/pingease-premium`.
+- Se fijó estrategia: contrato nace en open-core; premium consume contrato versionado (nunca al revés).
+- Se creó `docs/DUAL_REPO_PLAYBOOK.md` con flujo de issue espejo, PR cruzado y release dual.
+- Se actualizaron templates:
+  - `.github/ISSUE_TEMPLATE/backlog-p0-p1-p2.md`
+  - `.github/pull_request_template.md`
+- Se verificó GitHub CLI en entorno local:
+  - `gh version` OK
+  - `gh auth status` OK (scope incluye `project`, `repo`, `workflow`)
+- Se creó project premium en org `LEAR-Software`:
+  - `PingEase Premium Backlog` (#5)
+  - URL: `https://github.com/orgs/LEAR-Software/projects/5`
+- Se crearon issues premium espejo en `LEAR-Software/pingease-premium`:
+  - `#2` `[P0-07-PREM]` gate Free/Premium
+  - `#3` `[P1-03-PREM]` installer/update + rollback
+  - `#4` `[P2-02-PREM]` policy packs Pro/Business
+- Se agregaron issues al project premium (#5) y se sincronizó trazabilidad con comentarios en core (`#8`, `#12`, `#16`).
+- Se aseguró carga de issues core (`#2`-`#18`) en `PingEase MVP Backlog` (#4).
+
+### ⚠️ Pendiente
+- Definir owners por issue premium y setear estado inicial en project #5.
+- Evaluar si los items premium (`P0-07`, `P1-03`, `P2-02`) se mantienen como espejo o se transfieren oficialmente fuera de core en una etapa posterior.
+
+### 🔗 Enlaces Críticos
+- Open-core repo: `https://github.com/LEAR-Software/PingEase`
+- Premium repo: `https://github.com/LEAR-Software/pingease-premium`
+- Core project: `https://github.com/orgs/LEAR-Software/projects/4`
+- Premium project: `https://github.com/orgs/LEAR-Software/projects/5`
+- Playbook dual: `docs/DUAL_REPO_PLAYBOOK.md`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- Cambio clave: gobernanza dual-repo documentada y templates listos para trazabilidad cruzada.
+
+### 🚀 Recomendación para Next Session
+1. Asignar owners y milestones a premium issues `#2`, `#3`, `#4`.
+2. Abrir primeros PRs cross-repo con links espejo obligatorios.
+3. Definir política de cierre: cuándo cerrar issue core padre vs issue premium espejo.
+
+---
+
+## 📍 Sesión 2026-04-14 (Setup Backlog MVP - Histórica)
 
 ### 🎯 Objetivo
 Completar setup de backlog MVP en GitHub Project #4 con 17 issues (P0/P1/P2), migración de Premium repo, y documentación operativa.
@@ -156,8 +203,8 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-14 02:45 UTC  
-**Sesión:** Setup Backlog MVP + Premium Repo + Documentación Operativa  
-**Status:** ✅ Completada al 95% (pendiente: mergear PR #19 y crear milestones)  
-**Próxima:** Iniciar P0-01 Stabilize Core API
+**Última Actualización:** 2026-04-14 13:20 UTC  
+**Sesión:** Definición transversal open-core/premium + ejecución operativa en proyectos/issues  
+**Status:** ✅ Completada (playbook + templates + project premium + issues espejo creados/cargados)  
+**Próxima:** Asignar owners/milestones y abrir primeros PRs cross-repo
 
