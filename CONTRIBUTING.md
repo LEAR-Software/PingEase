@@ -29,4 +29,5 @@ Thanks for contributing to PingEase.
 - Small, focused PRs with clear rationale.
 - Include risk notes for router automation changes.
 - Update docs when behavior or compliance obligations change.
+- For roadmap items, create issues using `.github/ISSUE_TEMPLATE/backlog-p0-p1-p2.md`.
 
