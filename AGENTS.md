@@ -4,7 +4,88 @@
 
 ---
 
-## 📍 Sesión 2026-04-14 (ÚLTIMA - P0-01 Contract Stabilization)
+## 📍 Sesión 2026-04-14 (ÚLTIMA - PyCharm Run Configurations Fix)
+
+### 🎯 Objetivo
+Solucionar error "Python module name must be set" en PyCharm Run Configurations y asegurar que todos los tests se ejecuten correctamente desde el IDE.
+
+### ✅ Completado
+- **Diagnóstico del problema:**
+  - Las configuraciones usaban `SDK_HOME` hardcodeado con `USE_MODULE_SDK=false`
+  - PyCharm moderno requiere `IS_MODULE_SDK=true` para usar el SDK del proyecto
+  - Archivo `pyproject.toml` tenía BOM (Byte Order Mark) UTF-8 que causaba errores de parsing
+
+- **Correcciones aplicadas a Run Configurations:**
+  - `pingease_test_service_api.xml`: Cambiado a tipo `tests` con factory `Unittests`
+  - `pingease_tests.xml`: Cambiado a tipo `tests` con factory `Unittests`
+  - `pingease_main.xml`: Actualizado a usar `IS_MODULE_SDK=true`
+  - `pingease_service_api_demo.xml`: Actualizado a usar `IS_MODULE_SDK=true`
+  - `pingease_analyze_windows.xml`: Actualizado a usar `IS_MODULE_SDK=true`
+  - `pingease_ruff.xml`: Actualizado a usar `IS_MODULE_SDK=true` en modo módulo
+
+- **Corrección de `pyproject.toml`:**
+  - Eliminado BOM de UTF-8 que impedía parsing correcto
+  - Agregada configuración `[tool.hatch.build.targets.wheel]` con `packages = ["wifi_optimizer"]`
+  - Esto permite a hatchling encontrar los paquetes para incluir en la wheel
+
+- **Instalación de dependencias:**
+  - Ejecutado `pip install -e .` exitosamente
+  - Instalado `playwright install chromium`
+  - Tests validados: `python -m unittest tests.test_service_api -v` ✅ (4/4 tests OK)
+  - Discovery validado: `python -m unittest discover -s tests -v` ✅ (4/4 tests OK)
+
+- **Documentación creada:**
+  - `.idea/runConfigurations/README_TROUBLESHOOTING.md`: Guía completa de troubleshooting
+  - Actualizado `.idea/runConfigurations/README.md` con explicación de cambios
+
+### 🔧 Cambios Técnicos Clave
+
+#### Configuraciones de Test (antes → después)
+```xml
+<!-- ANTES (no funcionaba) -->
+<option name="SDK_HOME" value="$PROJECT_DIR$/.venv/Scripts/python.exe" />
+<option name="USE_MODULE_SDK" value="false" />
+<option name="MODULE_MODE" value="true" />
+<option name="MODULE_NAME" value="unittest" />
+
+<!-- DESPUÉS (funciona) -->
+<option name="SDK_HOME" value="" />
+<option name="IS_MODULE_SDK" value="true" />
+<option name="_new_target" value="&quot;$PROJECT_DIR$/tests&quot;" />
+<option name="_new_targetType" value="&quot;PATH&quot;" />
+```
+
+#### pyproject.toml
+```toml
+# Agregado para hatchling:
+[tool.hatch.build.targets.wheel]
+packages = ["wifi_optimizer"]
+```
+
+### ⚠️ Pendiente
+- Ninguno. Las configuraciones están funcionando correctamente.
+
+### 🔗 Enlaces Críticos
+- Troubleshooting Guide: `.idea/runConfigurations/README_TROUBLESHOOTING.md`
+- Run Configurations: `.idea/runConfigurations/*.xml`
+- Tests: `tests/test_service_api.py`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- Cambios no commiteados:
+  - 7 archivos XML de Run Configurations
+  - `pyproject.toml` (BOM eliminado + config hatchling)
+  - 2 archivos README en `.idea/runConfigurations/`
+- Tests: ✅ 4/4 pasando correctamente
+
+### 🚀 Recomendación para Next Session
+1. Hacer commit de los cambios de Run Configurations con mensaje descriptivo
+2. Verificar que PyCharm reconozca las configuraciones (puede requerir restart IDE)
+3. Continuar con P0-01: definir semántica explícita de `dry_run` en contrato
+
+---
+
+## 📍 Sesión 2026-04-14 (P0-01 Contract Stabilization)
 
 ### 🎯 Objetivo
 Avanzar la rama `feature/P0-01-stabilize-core-api` estabilizando el contrato de `OptimizationService` para integración con servicio/IPC.

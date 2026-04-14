@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "wifi-channel-optimizer"
 version = "0.1.0"
 description = "Automated Wi-Fi channel optimizer for Huawei HG8145X6 (Entel ISP)"
@@ -11,6 +11,9 @@ dependencies = [
 
 [project.scripts]
 wifi-optimizer = "main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["wifi_optimizer"]
 
 [build-system]
 requires = ["hatchling"]

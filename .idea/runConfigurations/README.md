@@ -44,16 +44,23 @@ Este directorio contiene configuraciones de ejecución (Run Configurations) para
 
 Todas las configuraciones comparten:
 
-- **Intérprete:** `.venv/Scripts/python.exe` (entorno virtual del proyecto)
+- **Intérprete:** SDK del módulo PingEase (usa el intérprete configurado en PyCharm para el proyecto)
 - **Working Directory:** `$PROJECT_DIR$` (raíz del proyecto)
 - **Module:** PingEase
 - **Add content roots:** ✅ Enabled
 - **Add source roots:** ✅ Enabled
 
+### ⚙️ Nota sobre configuración de intérprete
+
+Las configuraciones usan `IS_MODULE_SDK=true` en lugar de hardcodear la ruta del intérprete.
+Esto permite que PyCharm use automáticamente el Python configurado para el proyecto
+(típicamente el entorno virtual en `.venv/`).
+
 ## 📝 Notas
 
-- Estas configuraciones fueron adaptadas del proyecto hermano **PingEase-Premium**
-- El entorno virtual debe estar creado en `.venv/` para que funcionen correctamente
+- Estas configuraciones fueron actualizadas para usar el SDK del módulo correctamente
+- Las configuraciones de test usan el tipo `tests` con factory `Unittests` para mejor integración con PyCharm
+- El entorno virtual debe estar creado en `.venv/` y configurado en PyCharm
 - Si el intérprete no se encuentra, PyCharm solicitará configurarlo manualmente
 
 ## 🚀 Uso Rápido
