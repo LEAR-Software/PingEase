@@ -29,6 +29,8 @@ Definir el modelo operativo dual-repo (open-core + premium), documentarlo en pla
 - Se agregaron issues al project premium (#5) y se sincronizó trazabilidad con comentarios en core (`#8`, `#12`, `#16`).
 - Se aseguró carga de issues core (`#2`-`#18`) en `PingEase MVP Backlog` (#4).
 - Se commitearon y pushearon los cambios de gobernanza dual-repo en rama `feature/P0-01-stabilize-core-api`.
+- Se abrió PR en open-core para integrar cambios de gobernanza/documentación:
+  - PR `#20`: `https://github.com/LEAR-Software/PingEase/pull/20`
 - Se asignó owner `@matiasmlforever` a premium issues `#2`, `#3`, `#4`.
 - Se confirmó estado inicial `Todo` de los 3 items en project premium #5.
 
@@ -45,6 +47,7 @@ Definir el modelo operativo dual-repo (open-core + premium), documentarlo en pla
 
 ### 💾 Estado Final
 - Rama: `feature/P0-01-stabilize-core-api`
+- PR: `#20` (abierto)
 - Cambio clave: gobernanza dual-repo documentada y templates listos para trazabilidad cruzada.
 - Commit: `b2679aa` (`docs: add dual-repo playbook and cross-repo templates`)
 
