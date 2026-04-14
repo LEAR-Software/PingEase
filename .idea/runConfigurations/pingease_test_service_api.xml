@@ -10,8 +10,8 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="_new_pattern" value="&quot;&quot;" />
     <option name="_new_additionalArguments" value="&quot;-v&quot;" />
-    <option name="_new_target" value="&quot;$PROJECT_DIR$/tests/test_service_api.py&quot;" />
-    <option name="_new_targetType" value="&quot;PATH&quot;" />
+    <option name="_new_target" value="&quot;tests.test_service_api&quot;" />
+    <option name="_new_targetType" value="&quot;PYTHON&quot;" />
     <method v="2" />
   </configuration>
 </component>

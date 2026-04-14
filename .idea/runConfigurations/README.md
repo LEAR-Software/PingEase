@@ -60,8 +60,18 @@ Esto permite que PyCharm use automáticamente el Python configurado para el proy
 
 - Estas configuraciones fueron actualizadas para usar el SDK del módulo correctamente
 - Las configuraciones de test usan el tipo `tests` con factory `Unittests` para mejor integración con PyCharm
+- **IMPORTANTE:** Las configuraciones de test usan `_new_targetType="PYTHON"` (módulo Python) en lugar de `"PATH"` (archivo)
+  - Ejemplo: `target="tests.test_service_api"` en lugar de `target="$PROJECT_DIR$/tests/test_service_api.py"`
+  - Esto permite que PyCharm descubra y ejecute los tests correctamente
 - El entorno virtual debe estar creado en `.venv/` y configurado en PyCharm
 - Si el intérprete no se encuentra, PyCharm solicitará configurarlo manualmente
+
+### ✅ Cambio Reciente (2026-04-14)
+Se corrigió el error "Python module name must be set" cambiando las configuraciones de test:
+- De: `_new_targetType="PATH"` + `_new_target="$PROJECT_DIR$/tests/..."`
+- A: `_new_targetType="PYTHON"` + `_new_target="tests.test_service_api"`
+
+Ver `README_TROUBLESHOOTING.md` para más detalles.
 
 ## 🚀 Uso Rápido
 

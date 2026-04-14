@@ -22,10 +22,15 @@ Este error ocurre cuando las configuraciones de ejecución usan `SDK_HOME` con u
 - Similar a scripts, pero mantener `MODULE_MODE=true`
 - Asegurar que `MODULE_NAME` esté configurado correctamente
 
-#### 3. Para configuraciones de tests (unittest)
+#### 3. Para configuraciones de tests (unittest) - ✅ SOLUCIÓN ACTUALIZADA
 - Cambiar el tipo de `PythonConfigurationType` a `tests` con factory `Unittests`
-- Usar `_new_target` con `_new_targetType="PATH"`
-- Cambiar de `MODULE_MODE` a target basado en path
+- **IMPORTANTE:** Usar `_new_targetType="PYTHON"` en lugar de `"PATH"`
+- Target debe ser el módulo Python: `"tests.test_service_api"` en lugar de `"$PROJECT_DIR$/tests/test_service_api.py"`
+- Ejemplo correcto:
+  ```xml
+  <option name="_new_target" value="&quot;tests.test_service_api&quot;" />
+  <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+  ```
 
 ### Configuración de Dependencias
 

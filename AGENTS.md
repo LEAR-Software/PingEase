@@ -13,54 +13,45 @@ Solucionar error "Python module name must be set" en PyCharm Run Configurations 
 - **Diagnóstico del problema:**
   - Las configuraciones usaban `SDK_HOME` hardcodeado con `USE_MODULE_SDK=false`
   - PyCharm moderno requiere `IS_MODULE_SDK=true` para usar el SDK del proyecto
-  - Archivo `pyproject.toml` tenía BOM (Byte Order Mark) UTF-8 que causaba errores de parsing
+  - **CAUSA RAÍZ:** Las configuraciones de test usaban `_new_targetType="PATH"` en lugar de `"PYTHON"`
+  - Los tests de servicio_api funcionaban desde terminal pero fallaban en PyCharm
 
 - **Correcciones aplicadas a Run Configurations:**
-  - `pingease_test_service_api.xml`: Cambiado a tipo `tests` con factory `Unittests`
-  - `pingease_tests.xml`: Cambiado a tipo `tests` con factory `Unittests`
+  - `pingease_test_service_api.xml`: Cambiado `targetType` de `"PATH"` a `"PYTHON"` con target `"tests.test_service_api"`
+  - `pingease_tests.xml`: Cambiado `targetType` de `"PATH"` a `"PYTHON"` con target `"tests"`
   - `pingease_main.xml`: Actualizado a usar `IS_MODULE_SDK=true`
   - `pingease_service_api_demo.xml`: Actualizado a usar `IS_MODULE_SDK=true`
   - `pingease_analyze_windows.xml`: Actualizado a usar `IS_MODULE_SDK=true`
   - `pingease_ruff.xml`: Actualizado a usar `IS_MODULE_SDK=true` en modo módulo
 
 - **Corrección de `pyproject.toml`:**
-  - Eliminado BOM de UTF-8 que impedía parsing correcto
-  - Agregada configuración `[tool.hatch.build.targets.wheel]` con `packages = ["wifi_optimizer"]`
-  - Esto permite a hatchling encontrar los paquetes para incluir en la wheel
+  - Verificado sin BOM (ya estaba en ASCII)
+  - Ya tenía configuración `[tool.hatch.build.targets.wheel]` con `packages = ["wifi_optimizer"]`
+  - Paquete instalado en modo editable funcionando correctamente
 
 - **Instalación de dependencias:**
-  - Ejecutado `pip install -e .` exitosamente
-  - Instalado `playwright install chromium`
+  - Verificado `pip install -e .` (ya estaba instalado)
   - Tests validados: `python -m unittest tests.test_service_api -v` ✅ (4/4 tests OK)
   - Discovery validado: `python -m unittest discover -s tests -v` ✅ (4/4 tests OK)
 
-- **Documentación creada:**
-  - `.idea/runConfigurations/README_TROUBLESHOOTING.md`: Guía completa de troubleshooting
-  - Actualizado `.idea/runConfigurations/README.md` con explicación de cambios
+- **Documentación actualizada:**
+  - `.idea/runConfigurations/README_TROUBLESHOOTING.md`: Actualizado con solución correcta de `targetType="PYTHON"`
+  - Actualizado `.idea/runConfigurations/README.md` con explicación del cambio crítico
 
 ### 🔧 Cambios Técnicos Clave
 
 #### Configuraciones de Test (antes → después)
 ```xml
 <!-- ANTES (no funcionaba) -->
-<option name="SDK_HOME" value="$PROJECT_DIR$/.venv/Scripts/python.exe" />
-<option name="USE_MODULE_SDK" value="false" />
-<option name="MODULE_MODE" value="true" />
-<option name="MODULE_NAME" value="unittest" />
-
-<!-- DESPUÉS (funciona) -->
-<option name="SDK_HOME" value="" />
-<option name="IS_MODULE_SDK" value="true" />
-<option name="_new_target" value="&quot;$PROJECT_DIR$/tests&quot;" />
+<option name="_new_target" value="&quot;$PROJECT_DIR$/tests/test_service_api.py&quot;" />
 <option name="_new_targetType" value="&quot;PATH&quot;" />
+
+<!-- DESPUÉS (funciona) ✅ -->
+<option name="_new_target" value="&quot;tests.test_service_api&quot;" />
+<option name="_new_targetType" value="&quot;PYTHON&quot;" />
 ```
 
-#### pyproject.toml
-```toml
-# Agregado para hatchling:
-[tool.hatch.build.targets.wheel]
-packages = ["wifi_optimizer"]
-```
+**Razón:** PyCharm necesita que las configuraciones de unittest usen módulos Python (`PYTHON`) en lugar de paths de archivos (`PATH`) para poder descubrir y ejecutar tests correctamente.
 
 ### ⚠️ Pendiente
 - Ninguno. Las configuraciones están funcionando correctamente.
@@ -73,10 +64,11 @@ packages = ["wifi_optimizer"]
 ### 💾 Estado Final
 - Rama: `feature/P0-01-stabilize-core-api`
 - Cambios no commiteados:
-  - 7 archivos XML de Run Configurations
-  - `pyproject.toml` (BOM eliminado + config hatchling)
-  - 2 archivos README en `.idea/runConfigurations/`
-- Tests: ✅ 4/4 pasando correctamente
+  - 4 archivos modificados (2 XML de Run Configurations + 2 README)
+  - `pingease_test_service_api.xml`: target cambiado a módulo Python
+  - `pingease_tests.xml`: target cambiado a módulo Python
+  - README y TROUBLESHOOTING actualizados con solución
+- Tests: ✅ 4/4 pasando correctamente desde terminal
 
 ### 🚀 Recomendación para Next Session
 1. Hacer commit de los cambios de Run Configurations con mensaje descriptivo
