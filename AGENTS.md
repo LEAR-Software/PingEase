@@ -29,11 +29,11 @@ Avanzar la rama `feature/P0-01-stabilize-core-api` estabilizando el contrato de 
 
 ### ⚠️ Pendiente
 - Definir semántica explícita para `dry_run` en contrato IPC (`no_change` vs estado dedicado futuro).
-- Documentar payload esperado del contrato `v1` para consumidores P0-03 (IPC/API local).
 
 ### 🔗 Enlaces Críticos
 - Archivo principal: `wifi_optimizer/service_api.py`
 - Tests: `tests/test_service_api.py`
+- Contrato documentado: `docs/architecture/SERVICE_API_CONTRACT_V1.md`
 - PR abierto: `https://github.com/LEAR-Software/PingEase/pull/20`
 
 ### 💾 Estado Final
@@ -42,9 +42,9 @@ Avanzar la rama `feature/P0-01-stabilize-core-api` estabilizando el contrato de 
 - Cambio clave: contrato `OptimizationService` más estable y cubierto por tests unitarios.
 
 ### 🚀 Recomendación para Next Session
-1. Congelar/documentar payload `contract_version = "v1"` para P0-03 (IPC/API local).
-2. Definir semántica explícita de `dry_run` en contrato.
-3. Iniciar esqueleto de modo servicio (P0-02/P0-04) consumiendo `OptimizationResult.to_dict()`.
+1. Definir semántica explícita de `dry_run` en contrato (mantener o evolucionar `v1`).
+2. Iniciar esqueleto de modo servicio (P0-02/P0-04) consumiendo `OptimizationResult.to_dict()`.
+3. Crear primer adaptador IPC local que valide `contract_version` antes de procesar payload.
 
 ---
 
@@ -254,8 +254,8 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-14 14:20 UTC  
+**Última Actualización:** 2026-04-14 14:35 UTC  
 **Sesión:** P0-01 Contract Stabilization en `service_api` + tests unitarios  
-**Status:** ✅ Completada (código, tests, commit/push y PR #20 actualizados)  
-**Próxima:** Documentar contrato v1 y avanzar P0-02/P0-03
+**Status:** ✅ Completada (código/tests/PR y contrato `v1` documentado)  
+**Próxima:** Definir semántica `dry_run` y avanzar P0-02/P0-03
 
