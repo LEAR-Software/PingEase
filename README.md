@@ -21,6 +21,7 @@ Escanea el espectro de RF del entorno, selecciona el canal con menor congestión
 - Matriz de planes Free/Premium: `docs/free-premium-matrix.md`.
 - Checklist de compliance para PR/release: `docs/compliance-criteria.md`.
 - Backlog ejecutable MVP Windows (P0/P1/P2): `docs/mvp-windows-backlog.md`.
+- Contrato de la Service API (v1): `docs/architecture/SERVICE_API_CONTRACT_V1.md`.
 
 ---
 
@@ -82,8 +83,8 @@ Medir el gateway elimina todas las variables excepto el canal en sí.
 ### 1 — Clonar el repositorio
 
 ```bash
-git clone https://github.com/YOUR_USER/WifiChannelOptimizer.git
-cd WifiChannelOptimizer
+git clone https://github.com/LEAR-Software/PingEase.git
+cd PingEase
 ```
 
 ### 2 — Crear entorno virtual e instalar dependencias
@@ -236,6 +237,8 @@ Con la configuración por defecto, en el peor caso pierdes conexión **10 segund
 | `EMERGENCY_JITTER_MS` | `20` | Umbral de jitter para habilitar acciones en modo emergencia durante horarios fuera de ventana. |
 | `EMERGENCY_HYSTERESIS` | `0.50` | Mejora RF mínima en modo emergencia (más estricta que normal para evitar cortes innecesarios en plena partida). |
 | `EMERGENCY_COOLDOWN_SECONDS` | `3600` | Cooldown entre cambios de emergencia (1 hora) para reducir flapping y escrituras repetidas. |
+| `LOG_FILE` | `wifi_optimizer.log` | Ruta del archivo de log. Relativa al directorio de trabajo por defecto. |
+| `LOG_LEVEL` | `INFO` | Nivel de log: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 
 ---
 
@@ -250,6 +253,38 @@ GAMING_PROFILE=aggressive
 Efecto esperado: actúa con más facilidad ante degradación nocturna, pero acepta más riesgo de cambios/cortes durante sesiones largas.
 
 Si quieres afinar manualmente, `EMERGENCY_*` siempre tiene prioridad sobre el perfil.
+
+---
+
+## 🔧 API de Servicio (uso programático)
+
+El núcleo del optimizer está disponible como API de Python sin dependencias de CLI — pensada para que el servicio de Windows lo invoque directamente.
+
+```python
+from wifi_optimizer.config import OptimizerConfig
+from wifi_optimizer.service_api import OptimizationService
+
+# Configurar programáticamente (sin .env ni args CLI)
+config = OptimizerConfig(
+    router_url="http://192.168.100.1",
+    router_user="admin",
+    router_pass="mi_contraseña",
+)
+
+# O cargar desde variables de entorno / .env
+config = OptimizerConfig.from_env()
+
+service = OptimizationService(config)
+result  = service.run_cycle(dry_run=True)   # True = sin tocar el router
+
+print(result.status)   # "success" | "no_change" | "error"
+print(result.changed)  # True si se aplicó un cambio de canal
+print(result.to_dict()) # dict JSON-serializable — contrato v1
+```
+
+El `OptimizationResult` nunca llama `sys.exit()`. En caso de error devuelve `status="error"` con un campo `details` estructurado, lo que lo hace seguro para embeber en servicios de larga duración.
+
+El contrato completo del payload está definido en `docs/architecture/SERVICE_API_CONTRACT_V1.md`.
 
 ---
 
@@ -294,9 +329,11 @@ Cada ejecución agrega al archivo `wifi_optimizer.log`:
 ## 📁 Estructura del proyecto
 
 ```
-WifiChannelOptimizer/
+PingEase/
 ├── main.py                        # Entry point — carga config, selecciona driver, loop daemon
 ├── wifi_optimizer/
+│   ├── config.py                  # OptimizerConfig dataclass — esquema de configuración tipado
+│   ├── service_api.py             # OptimizationService — API programática sin dependencias CLI
 │   ├── scanner.py                 # Fase 1: escaneo netsh + conversión a dBm
 │   ├── decision.py                # Fase 2: scoring de congestión, histéresis, selección de canal
 │   ├── quality.py                 # Métricas gaming: RTT al gateway, jitter, velocidad
@@ -306,6 +343,8 @@ WifiChannelOptimizer/
 │   └── routers/
 │       ├── base.py                # BaseRouter ABC — contrato que todo driver debe implementar
 │       └── huawei_hg8145x6.py    # Driver concreto para Huawei HG8145X6 (Entel, Chile)
+├── tests/
+│   └── test_service_api.py        # Tests unitarios de OptimizationService
 ├── analyze_windows.py             # Wrapper standalone para --analyze
 ├── .env.example                   # Plantilla de configuración — copiar a .env y completar
 ├── .env                           # Credenciales locales (ignorado por git)
