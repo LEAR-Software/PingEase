@@ -11,6 +11,14 @@ Escanea el espectro de RF del entorno, selecciona el canal con menor congestión
 
 > **Caso de uso principal:** reducir la latencia en **videojuegos multijugador** — las métricas de calidad y la lógica de reversión están calibradas para bajo ping y bajo jitter, no para maximizar velocidad de descarga.
 
+## Repo security baseline (PingEase)
+
+- Responsible disclosure: ver `.github/SECURITY.md`.
+- Dependency scanning: workflows en `.github/workflows/ci.yml` y `.github/workflows/deps-audit.yml`.
+- Governance y ownership: `.github/CODEOWNERS` y `CONTRIBUTING.md`.
+- Compliance minimo: `NOTICE`, `THIRD_PARTY_LICENSES.md`, y borradores en `docs/legal/`.
+- Frontera open-core vs premium: `docs/open-core-boundary.md`.
+
 ---
 
 ## ✨ Características
