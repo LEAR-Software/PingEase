@@ -47,6 +47,7 @@ router_wlan5.html
 
 # IDEs
 .idea/
+!.idea/runConfigurations/
 .vscode/
 *.iml
 
