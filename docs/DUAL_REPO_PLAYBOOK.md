@@ -63,6 +63,21 @@ Every PR that impacts roadmap must include:
 - Cross-repo reference (issue or PR URL)
 - Boundary confirmation (`open-core-boundary` + `free-premium-matrix`)
 
+Example (premium draft PR):
+
+```bash
+gh pr create \
+  --repo LEAR-Software/pingease-premium \
+  --base main \
+  --head feature/P0-07-prem-entitlement-gate \
+  --draft \
+  --title "[P0-07-PREM] Integrate entitlement gate into premium execution flow" \
+  --body "Fixes #2
+
+Parent core issue:
+- https://github.com/LEAR-Software/PingEase/issues/8"
+```
+
 ## Dual Release Checklist
 
 - [ ] Core tag created and published (SemVer)

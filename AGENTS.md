@@ -4,6 +4,45 @@
 
 ---
 
+## 📍 Sesión 2026-04-14 (ÚLTIMA - P0-01 Contract Stabilization)
+
+### 🎯 Objetivo
+Avanzar la rama `feature/P0-01-stabilize-core-api` estabilizando el contrato de `OptimizationService` para integración con servicio/IPC.
+
+### ✅ Completado
+- Se endureció `wifi_optimizer/service_api.py` con contrato más estable:
+  - `status` tipado con `Literal` (`success` | `no_change` | `error`).
+  - `details` tipado (`dict[str, object]`).
+  - `contract_version = "v1"` en `OptimizationResult.to_dict()`.
+  - Validación de entrada en constructor (`OptimizerConfig` requerido y `router_driver` no vacío).
+  - Detección de cambio por snapshot pre/post ciclo (`current_24/current_5`) en vez de flags internos frágiles.
+  - Error normalizado con `error_code = SERVICE_CYCLE_FAILURE`.
+- Se agregaron pruebas unitarias en `tests/test_service_api.py` para rutas críticas:
+  - `success` (cambio aplicado), `no_change`, `error` normalizado, driver inválido.
+- Se ejecutó validación local:
+  - `python -m unittest tests/test_service_api.py -v` ✅ (4 tests OK).
+
+### ⚠️ Pendiente
+- Publicar commit/push de este bloque técnico en `feature/P0-01-stabilize-core-api`.
+- Actualizar PR `#20` con nota de alcance técnico adicional (contract v1 + tests).
+- Definir semántica explícita para `dry_run` en contrato IPC (`no_change` vs estado dedicado futuro).
+
+### 🔗 Enlaces Críticos
+- Archivo principal: `wifi_optimizer/service_api.py`
+- Tests: `tests/test_service_api.py`
+- PR abierto: `https://github.com/LEAR-Software/PingEase/pull/20`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- Cambio clave: contrato `OptimizationService` más estable y cubierto por tests unitarios.
+
+### 🚀 Recomendación para Next Session
+1. Commitear/pushear este bloque técnico y anexar evidencia de tests al PR `#20`.
+2. Congelar `contract_version` y documentar payload esperado para P0-03 (IPC/API local).
+3. Iniciar esqueleto de modo servicio (P0-02/P0-04) consumiendo `OptimizationResult.to_dict()`.
+
+---
+
 ## 📍 Sesión 2026-04-14 (ÚLTIMA - Definición Transversal Open-Core/Premium)
 
 ### 🎯 Objetivo
@@ -210,8 +249,8 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-14 13:35 UTC  
-**Sesión:** Definición transversal open-core/premium + ejecución operativa en proyectos/issues  
-**Status:** ✅ Completada (playbook + templates + project premium + issues espejo + owners/estado inicial)  
-**Próxima:** Abrir primer par de PRs cross-repo para P0-07
+**Última Actualización:** 2026-04-14 14:05 UTC  
+**Sesión:** P0-01 Contract Stabilization en `service_api` + tests unitarios  
+**Status:** ✅ En progreso (código y tests listos, pendiente commit/push del bloque técnico)  
+**Próxima:** Publicar cambios y actualizar PR #20 con evidencia
 

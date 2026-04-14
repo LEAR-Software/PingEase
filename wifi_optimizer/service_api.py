@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal, Optional
 
 from wifi_optimizer.config import OptimizerConfig
 from wifi_optimizer.optimizer import run_optimization_cycle
@@ -18,6 +18,7 @@ from wifi_optimizer.routers.base import BaseRouter
 from wifi_optimizer.routers.huawei_hg8145x6 import HuaweiHG8145X6
 
 log = logging.getLogger(__name__)
+CONTRACT_VERSION = "v1"
 
 # Router driver registry
 _ROUTER_DRIVERS = {
@@ -34,7 +35,7 @@ class OptimizationResult:
     Suitable for service/IPC responses (no sys.exit() calls).
     """
 
-    status: str
+    status: Literal["success", "no_change", "error"]
     """
     One of:
     - "success": cycle ran and made a channel change
@@ -48,7 +49,7 @@ class OptimizationResult:
     reason: str
     """Human-readable explanation of status."""
 
-    details: dict
+    details: dict[str, object]
     """
     Optional structured details:
     - error_type: exception class name (if status=="error")
@@ -61,6 +62,7 @@ class OptimizationResult:
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
         return {
+            "contract_version": CONTRACT_VERSION,
             "status": self.status,
             "changed": self.changed,
             "reason": self.reason,
@@ -82,6 +84,11 @@ class OptimizationService:
 
         Does NOT connect to router yet.
         """
+        if not isinstance(config, OptimizerConfig):
+            raise TypeError("config must be an instance of OptimizerConfig")
+        if not config.router_driver or not config.router_driver.strip():
+            raise ValueError("router_driver must be a non-empty string")
+
         self.config = config
         self.router: Optional[BaseRouter] = None
         self.state = {
@@ -151,6 +158,9 @@ class OptimizationService:
                     self.router.read_channels()
                 )
 
+            before_24 = self.state.get("current_24")
+            before_5 = self.state.get("current_5")
+
             # Build cycle kwargs from config
             cycle_kwargs = {
                 "router": self.router,
@@ -165,19 +175,22 @@ class OptimizationService:
             run_optimization_cycle(**cycle_kwargs)
 
             # Determine result status
-            changed = self.state.get("_last_cycle_changed", False)
+            after_24 = self.state.get("current_24")
+            after_5 = self.state.get("current_5")
+            changed = (after_24 != before_24) or (after_5 != before_5)
+
             if changed:
                 status = "success"
-                reason = "Channel change applied (or would be applied in dry-run)."
+                reason = "Channel change applied."
                 details = {
-                    "old_channel_24": self.state.get("_old_24"),
-                    "new_channel_24": self.state.get("_new_24"),
-                    "old_channel_5": self.state.get("_old_5"),
-                    "new_channel_5": self.state.get("_new_5"),
+                    "old_channel_24": before_24,
+                    "new_channel_24": after_24,
+                    "old_channel_5": before_5,
+                    "new_channel_5": after_5,
                 }
             else:
                 status = "no_change"
-                reason = "No channel change needed (within thresholds)."
+                reason = "No channel change applied."
                 details = {}
 
             return OptimizationResult(
@@ -194,6 +207,7 @@ class OptimizationService:
                 changed=False,
                 reason=str(exc),
                 details={
+                    "error_code": "SERVICE_CYCLE_FAILURE",
                     "error_type": exc.__class__.__name__,
                     "error_message": str(exc),
                 },
