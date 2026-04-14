@@ -11,6 +11,17 @@ Scans the surrounding RF spectrum, selects the least-congested channel for both 
 
 > **Primary use case:** reduce latency for **multiplayer gaming** — the quality metrics and revert logic are tuned for low ping and low jitter, not throughput.
 
+## Repo Security Baseline (PingEase)
+
+- Responsible disclosure: see `.github/SECURITY.md`.
+- Dependency scanning: `.github/workflows/ci.yml` and `.github/workflows/deps-audit.yml`.
+- Governance and ownership: `.github/CODEOWNERS` and `CONTRIBUTING.md`.
+- Minimum compliance set: `NOTICE`, `THIRD_PARTY_LICENSES.md`, and drafts under `docs/legal/`.
+- Open-core vs premium boundary: `docs/open-core-boundary.md`.
+- Free/Premium tier matrix: `docs/free-premium-matrix.md`.
+- PR/release compliance checklist: `docs/compliance-criteria.md`.
+- Executable Windows MVP backlog (P0/P1/P2): `docs/mvp-windows-backlog.md`.
+
 ---
 
 ## ✨ Features

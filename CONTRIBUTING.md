@@ -14,12 +14,15 @@ Thanks for contributing to PingEase.
 - Do not copy code or assets from proprietary third-party software.
 - Prefer integration via API/CLI/plugin wrappers over source copying.
 - Keep `NOTICE` and `THIRD_PARTY_LICENSES.md` updated when dependencies change.
+- Keep `docs/free-premium-matrix.md` updated when tier behavior changes.
+- Use `docs/compliance-criteria.md` as PR checklist for legal/commercial-impact changes.
 
 ## Open-Core Boundary
 
 - Contributions in this repository target the open-core baseline.
 - Premium-only behavior must remain outside this repository unless explicitly documented.
 - See `docs/open-core-boundary.md` for allowed scope.
+- Product tiers and feature mapping live in `docs/free-premium-matrix.md`.
 
 ## Pull Request Rules
 
