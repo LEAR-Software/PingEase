@@ -28,10 +28,13 @@ Definir el modelo operativo dual-repo (open-core + premium), documentarlo en pla
   - `#4` `[P2-02-PREM]` policy packs Pro/Business
 - Se agregaron issues al project premium (#5) y se sincronizó trazabilidad con comentarios en core (`#8`, `#12`, `#16`).
 - Se aseguró carga de issues core (`#2`-`#18`) en `PingEase MVP Backlog` (#4).
+- Se commitearon y pushearon los cambios de gobernanza dual-repo en rama `feature/P0-01-stabilize-core-api`.
+- Se asignó owner `@matiasmlforever` a premium issues `#2`, `#3`, `#4`.
+- Se confirmó estado inicial `Todo` de los 3 items en project premium #5.
 
 ### ⚠️ Pendiente
-- Definir owners por issue premium y setear estado inicial en project #5.
 - Evaluar si los items premium (`P0-07`, `P1-03`, `P2-02`) se mantienen como espejo o se transfieren oficialmente fuera de core en una etapa posterior.
+- Abrir primer par de PRs cross-repo para `P0-07` con enlaces espejo obligatorios.
 
 ### 🔗 Enlaces Críticos
 - Open-core repo: `https://github.com/LEAR-Software/PingEase`
@@ -43,11 +46,12 @@ Definir el modelo operativo dual-repo (open-core + premium), documentarlo en pla
 ### 💾 Estado Final
 - Rama: `feature/P0-01-stabilize-core-api`
 - Cambio clave: gobernanza dual-repo documentada y templates listos para trazabilidad cruzada.
+- Commit: `b2679aa` (`docs: add dual-repo playbook and cross-repo templates`)
 
 ### 🚀 Recomendación para Next Session
-1. Asignar owners y milestones a premium issues `#2`, `#3`, `#4`.
-2. Abrir primeros PRs cross-repo con links espejo obligatorios.
-3. Definir política de cierre: cuándo cerrar issue core padre vs issue premium espejo.
+1. Abrir primer par de PRs cross-repo para `P0-07` (`PingEase#8` <-> `pingease-premium#2`).
+2. Definir política de cierre: cuándo cerrar issue core padre vs issue premium espejo.
+3. Crear milestones (Week 1..6+) y asignarlos a los issues premium espejo.
 
 ---
 
@@ -203,8 +207,8 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-14 13:20 UTC  
+**Última Actualización:** 2026-04-14 13:35 UTC  
 **Sesión:** Definición transversal open-core/premium + ejecución operativa en proyectos/issues  
-**Status:** ✅ Completada (playbook + templates + project premium + issues espejo creados/cargados)  
-**Próxima:** Asignar owners/milestones y abrir primeros PRs cross-repo
+**Status:** ✅ Completada (playbook + templates + project premium + issues espejo + owners/estado inicial)  
+**Próxima:** Abrir primer par de PRs cross-repo para P0-07
 
