@@ -22,6 +22,13 @@ Describe el problema u oportunidad en 3-5 lineas.
 - Bloqueada por: <!-- ej. P0-01, PR #123, decision legal -->
 - Bloquea a:
 
+## Coordinacion cross-repo
+
+- Repo objetivo: <!-- LEAR-Software/PingEase | LEAR-Software/pingease-premium -->
+- Project objetivo: <!-- LEAR-Software #4 | PingEase Premium Backlog -->
+- Issue espejo (si aplica): <!-- URL o #id -->
+- PR cross-repo relacionado (si aplica):
+
 ## Boundary check (open-core vs premium)
 
 - Alcance: <!-- Open-core | Premium layer | Commercial ops -->
@@ -73,6 +80,7 @@ Describe el problema u oportunidad en 3-5 lineas.
 ## Referencias
 
 - Backlog base: `docs/mvp-windows-backlog.md`
+- Playbook dual: `docs/DUAL_REPO_PLAYBOOK.md`
 - Compliance: `docs/compliance-criteria.md`
 - PR/commits relacionados:
 

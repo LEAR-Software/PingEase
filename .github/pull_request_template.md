@@ -3,6 +3,11 @@
 ## Related Issue(s)
 <!-- Link to related backlog issue(s): Fixes #XX -->
 
+## Cross-Repo Traceability (required if roadmap-impacting)
+- Peer repository: <!-- LEAR-Software/PingEase | LEAR-Software/pingease-premium -->
+- Peer issue: <!-- URL or #id -->
+- Peer PR: <!-- URL if already opened -->
+
 ## Description
 <!-- Describe the changes in this PR. What problem does it solve? -->
 
@@ -40,6 +45,11 @@
 - [ ] Reviewed against `docs/free-premium-matrix.md`
 - [ ] No premium-sensitive logic merged into open-core without explicit approval
 
+### Dual Release Gate (if applicable)
+- [ ] Core/Premium compatibility noted (core tag or SHA referenced)
+- [ ] Cross-repo issue status synced
+- [ ] Release/rollback notes updated
+
 ### CI & Branch Protection
 - [ ] All GitHub Actions checks pass (CI, audit, etc.)
 - [ ] No merge conflicts
@@ -60,6 +70,7 @@
 
 **Reference Links:**
 - Backlog: `docs/mvp-windows-backlog.md`
+- Dual repo playbook: `docs/DUAL_REPO_PLAYBOOK.md`
 - Compliance criteria: `docs/compliance-criteria.md`
 - Open-core boundary: `docs/open-core-boundary.md`
 - Free/Premium matrix: `docs/free-premium-matrix.md`

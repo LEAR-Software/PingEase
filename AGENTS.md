@@ -4,7 +4,243 @@
 
 ---
 
-## 📍 Sesión 2026-04-14 (ÚLTIMA - En Progreso)
+## 📍 Sesión 2026-04-15 (ÚLTIMA - P0-01 DoD Evaluation)
+
+### 🎯 Objetivo
+Evaluar estado de cumplimiento del Definition of Done (DoD) de P0-01 y preparar para merge.
+
+### ✅ Completado
+- **Evaluación completa del DoD:**
+  - ✅ Entrypoint core invocable sin CLI: `OptimizationService` implementado sin `sys.exit()` ni `argparse`
+  - ✅ Flujo `--dry-run` sin regresiones: Test unitario agregado + CLI legacy validado
+  - ✅ Cambios documentados: 3 archivos de arquitectura (CONTRACT_V1, OVERVIEW, PLAN)
+
+- **Test adicional creado:**
+  - `test_run_cycle_dry_run_preserves_semantics`: Valida que `dry_run=True` mantiene semántica esperada
+  - Total tests: 5/5 pasando ✅
+
+- **Documentación de evaluación:**
+  - `docs/architecture/P0-01-DOD-STATUS.md`: Reporte detallado de completitud del DoD
+  - Evidencia de cada criterio con referencias a código y tests
+
+- **Validaciones ejecutadas:**
+  - Tests unitarios: `python -m unittest tests.test_service_api -v` → 5/5 OK
+  - Coverage de rutas: success, no_change, error, invalid_driver, dry_run
+  - CLI legacy: `main.py` sigue funcional con `--dry-run`
+
+### 📊 DoD Status
+
+**Alcanzado:** ✅ **100%**
+
+| Criterio | Estado | Evidencia |
+|----------|--------|-----------|
+| Entrypoint core sin CLI | ✅ | `service_api.py` + tests + sin `sys.exit()` |
+| `--dry-run` sin regresiones | ✅ | Tests + CLI legacy funcional |
+| Documentación arquitectura | ✅ | CONTRACT_V1 + OVERVIEW + PLAN |
+
+Ver detalles completos en: `docs/architecture/P0-01-DOD-STATUS.md`
+
+### ⚠️ Pendiente
+- Commit del test adicional `test_run_cycle_dry_run_preserves_semantics`
+- Commit del reporte de DoD (`P0-01-DOD-STATUS.md`)
+- Actualizar PR #20 con evidencia de DoD completado
+- Solicitar review final y merge de PR #20
+
+### 🔗 Enlaces Críticos
+- Reporte DoD: `docs/architecture/P0-01-DOD-STATUS.md`
+- Tests: `tests/test_service_api.py` (5 tests)
+- Contrato: `docs/architecture/SERVICE_API_CONTRACT_V1.md`
+- PR: `https://github.com/LEAR-Software/PingEase/pull/20`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- Tests: ✅ 5/5 pasando
+- DoD: ✅ 100% completado
+- Cambios sin commit:
+  - `tests/test_service_api.py`: +1 test (dry_run semantics)
+  - `docs/architecture/P0-01-DOD-STATUS.md`: +1 archivo (reporte DoD)
+  - `AGENTS.md`: actualizado con evaluación
+
+### 🚀 Recomendación para Next Session
+1. Commitear cambios pendientes (test + reporte DoD)
+2. Actualizar PR #20 con mensaje: "DoD completado al 100% - listo para review"
+3. Solicitar review final del PR #20
+4. Tras merge, iniciar P0-02: "Add service-ready execution mode and structured results"
+
+---
+
+## 📍 Sesión 2026-04-14 (PyCharm Run Configurations Fix)
+
+### 🎯 Objetivo
+Solucionar error "Python module name must be set" en PyCharm Run Configurations y asegurar que todos los tests se ejecuten correctamente desde el IDE.
+
+### ✅ Completado
+- **Diagnóstico del problema:**
+  - Las configuraciones usaban `SDK_HOME` hardcodeado con `USE_MODULE_SDK=false`
+  - PyCharm moderno requiere `IS_MODULE_SDK=true` para usar el SDK del proyecto
+  - **CAUSA RAÍZ:** Las configuraciones de test usaban `_new_targetType="PATH"` en lugar de `"PYTHON"`
+  - Los tests de servicio_api funcionaban desde terminal pero fallaban en PyCharm
+
+- **Correcciones aplicadas a Run Configurations:**
+  - `pingease_test_service_api.xml`: Cambiado `targetType` de `"PATH"` a `"PYTHON"` con target `"tests.test_service_api"`
+  - `pingease_tests.xml`: Cambiado `targetType` de `"PATH"` a `"PYTHON"` con target `"tests"`
+  - `pingease_main.xml`: Actualizado a usar `IS_MODULE_SDK=true`
+  - `pingease_service_api_demo.xml`: Actualizado a usar `IS_MODULE_SDK=true`
+  - `pingease_analyze_windows.xml`: Actualizado a usar `IS_MODULE_SDK=true`
+  - `pingease_ruff.xml`: Actualizado a usar `IS_MODULE_SDK=true` en modo módulo
+
+- **Corrección de `pyproject.toml`:**
+  - Verificado sin BOM (ya estaba en ASCII)
+  - Ya tenía configuración `[tool.hatch.build.targets.wheel]` con `packages = ["wifi_optimizer"]`
+  - Paquete instalado en modo editable funcionando correctamente
+
+- **Instalación de dependencias:**
+  - Verificado `pip install -e .` (ya estaba instalado)
+  - Tests validados: `python -m unittest tests.test_service_api -v` ✅ (4/4 tests OK)
+  - Discovery validado: `python -m unittest discover -s tests -v` ✅ (4/4 tests OK)
+
+- **Documentación actualizada:**
+  - `.idea/runConfigurations/README_TROUBLESHOOTING.md`: Actualizado con solución correcta de `targetType="PYTHON"`
+  - Actualizado `.idea/runConfigurations/README.md` con explicación del cambio crítico
+
+### 🔧 Cambios Técnicos Clave
+
+#### Configuraciones de Test (antes → después)
+```xml
+<!-- ANTES (no funcionaba) -->
+<option name="_new_target" value="&quot;$PROJECT_DIR$/tests/test_service_api.py&quot;" />
+<option name="_new_targetType" value="&quot;PATH&quot;" />
+
+<!-- DESPUÉS (funciona) ✅ -->
+<option name="_new_target" value="&quot;tests.test_service_api&quot;" />
+<option name="_new_targetType" value="&quot;PYTHON&quot;" />
+```
+
+**Razón:** PyCharm necesita que las configuraciones de unittest usen módulos Python (`PYTHON`) en lugar de paths de archivos (`PATH`) para poder descubrir y ejecutar tests correctamente.
+
+### ⚠️ Pendiente
+- Ninguno. Las configuraciones están funcionando correctamente.
+
+### 🔗 Enlaces Críticos
+- Troubleshooting Guide: `.idea/runConfigurations/README_TROUBLESHOOTING.md`
+- Run Configurations: `.idea/runConfigurations/*.xml`
+- Tests: `tests/test_service_api.py`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- Cambios no commiteados:
+  - 4 archivos modificados (2 XML de Run Configurations + 2 README)
+  - `pingease_test_service_api.xml`: target cambiado a módulo Python
+  - `pingease_tests.xml`: target cambiado a módulo Python
+  - README y TROUBLESHOOTING actualizados con solución
+- Tests: ✅ 4/4 pasando correctamente desde terminal
+
+### 🚀 Recomendación para Next Session
+1. Hacer commit de los cambios de Run Configurations con mensaje descriptivo
+2. Verificar que PyCharm reconozca las configuraciones (puede requerir restart IDE)
+3. Continuar con P0-01: definir semántica explícita de `dry_run` en contrato
+
+---
+
+## 📍 Sesión 2026-04-14 (P0-01 Contract Stabilization)
+
+### 🎯 Objetivo
+Avanzar la rama `feature/P0-01-stabilize-core-api` estabilizando el contrato de `OptimizationService` para integración con servicio/IPC.
+
+### ✅ Completado
+- Se endureció `wifi_optimizer/service_api.py` con contrato más estable:
+  - `status` tipado con `Literal` (`success` | `no_change` | `error`).
+  - `details` tipado (`dict[str, object]`).
+  - `contract_version = "v1"` en `OptimizationResult.to_dict()`.
+  - Validación de entrada en constructor (`OptimizerConfig` requerido y `router_driver` no vacío).
+  - Detección de cambio por snapshot pre/post ciclo (`current_24/current_5`) en vez de flags internos frágiles.
+  - Error normalizado con `error_code = SERVICE_CYCLE_FAILURE`.
+- Se conservó una mejora valiosa en `docs/DUAL_REPO_PLAYBOOK.md`:
+  - ejemplo corto y válido de `gh pr create` para PR draft cross-repo premium.
+- Se agregaron pruebas unitarias en `tests/test_service_api.py` para rutas críticas:
+  - `success` (cambio aplicado), `no_change`, `error` normalizado, driver inválido.
+- Se ejecutó validación local:
+  - `python -m unittest tests/test_service_api.py -v` ✅ (4 tests OK).
+- Se publicó el bloque técnico en `feature/P0-01-stabilize-core-api`:
+  - Commit: `5aa348d` (`feat(service): stabilize OptimizationService contract and add tests`)
+- Se actualizó el PR `#20` con el alcance técnico real de P0-01 y la evidencia de tests.
+
+### ⚠️ Pendiente
+- Definir semántica explícita para `dry_run` en contrato IPC (`no_change` vs estado dedicado futuro).
+
+### 🔗 Enlaces Críticos
+- Archivo principal: `wifi_optimizer/service_api.py`
+- Tests: `tests/test_service_api.py`
+- Contrato documentado: `docs/architecture/SERVICE_API_CONTRACT_V1.md`
+- PR abierto: `https://github.com/LEAR-Software/PingEase/pull/20`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- PR: `#20` (actualizado)
+- Cambio clave: contrato `OptimizationService` más estable y cubierto por tests unitarios.
+
+### 🚀 Recomendación para Next Session
+1. Definir semántica explícita de `dry_run` en contrato (mantener o evolucionar `v1`).
+2. Iniciar esqueleto de modo servicio (P0-02/P0-04) consumiendo `OptimizationResult.to_dict()`.
+3. Crear primer adaptador IPC local que valide `contract_version` antes de procesar payload.
+
+---
+
+## 📍 Sesión 2026-04-14 (ÚLTIMA - Definición Transversal Open-Core/Premium)
+
+### 🎯 Objetivo
+Definir el modelo operativo dual-repo (open-core + premium), documentarlo en plantillas/playbook, y dejar lista la carga de issues/proyectos en GitHub.
+
+### ✅ Completado
+- Se validó operación transversal entre `LEAR-Software/PingEase` y `LEAR-Software/pingease-premium`.
+- Se fijó estrategia: contrato nace en open-core; premium consume contrato versionado (nunca al revés).
+- Se creó `docs/DUAL_REPO_PLAYBOOK.md` con flujo de issue espejo, PR cruzado y release dual.
+- Se actualizaron templates:
+  - `.github/ISSUE_TEMPLATE/backlog-p0-p1-p2.md`
+  - `.github/pull_request_template.md`
+- Se verificó GitHub CLI en entorno local:
+  - `gh version` OK
+  - `gh auth status` OK (scope incluye `project`, `repo`, `workflow`)
+- Se creó project premium en org `LEAR-Software`:
+  - `PingEase Premium Backlog` (#5)
+  - URL: `https://github.com/orgs/LEAR-Software/projects/5`
+- Se crearon issues premium espejo en `LEAR-Software/pingease-premium`:
+  - `#2` `[P0-07-PREM]` gate Free/Premium
+  - `#3` `[P1-03-PREM]` installer/update + rollback
+  - `#4` `[P2-02-PREM]` policy packs Pro/Business
+- Se agregaron issues al project premium (#5) y se sincronizó trazabilidad con comentarios en core (`#8`, `#12`, `#16`).
+- Se aseguró carga de issues core (`#2`-`#18`) en `PingEase MVP Backlog` (#4).
+- Se commitearon y pushearon los cambios de gobernanza dual-repo en rama `feature/P0-01-stabilize-core-api`.
+- Se abrió PR en open-core para integrar cambios de gobernanza/documentación:
+  - PR `#20`: `https://github.com/LEAR-Software/PingEase/pull/20`
+- Se asignó owner `@matiasmlforever` a premium issues `#2`, `#3`, `#4`.
+- Se confirmó estado inicial `Todo` de los 3 items en project premium #5.
+
+### ⚠️ Pendiente
+- Evaluar si los items premium (`P0-07`, `P1-03`, `P2-02`) se mantienen como espejo o se transfieren oficialmente fuera de core en una etapa posterior.
+- Abrir primer par de PRs cross-repo para `P0-07` con enlaces espejo obligatorios.
+
+### 🔗 Enlaces Críticos
+- Open-core repo: `https://github.com/LEAR-Software/PingEase`
+- Premium repo: `https://github.com/LEAR-Software/pingease-premium`
+- Core project: `https://github.com/orgs/LEAR-Software/projects/4`
+- Premium project: `https://github.com/orgs/LEAR-Software/projects/5`
+- Playbook dual: `docs/DUAL_REPO_PLAYBOOK.md`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- PR: `#20` (abierto)
+- Cambio clave: gobernanza dual-repo documentada y templates listos para trazabilidad cruzada.
+- Commit: `b2679aa` (`docs: add dual-repo playbook and cross-repo templates`)
+
+### 🚀 Recomendación para Next Session
+1. Abrir primer par de PRs cross-repo para `P0-07` (`PingEase#8` <-> `pingease-premium#2`).
+2. Definir política de cierre: cuándo cerrar issue core padre vs issue premium espejo.
+3. Crear milestones (Week 1..6+) y asignarlos a los issues premium espejo.
+
+---
+
+## 📍 Sesión 2026-04-14 (Setup Backlog MVP - Histórica)
 
 ### 🎯 Objetivo
 Completar setup de backlog MVP en GitHub Project #4 con 17 issues (P0/P1/P2), migración de Premium repo, y documentación operativa.
@@ -156,8 +392,8 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-14 02:45 UTC  
-**Sesión:** Setup Backlog MVP + Premium Repo + Documentación Operativa  
-**Status:** ✅ Completada al 95% (pendiente: mergear PR #19 y crear milestones)  
-**Próxima:** Iniciar P0-01 Stabilize Core API
+**Última Actualización:** 2026-04-14 14:35 UTC  
+**Sesión:** P0-01 Contract Stabilization en `service_api` + tests unitarios  
+**Status:** ✅ Completada (código/tests/PR y contrato `v1` documentado)  
+**Próxima:** Definir semántica `dry_run` y avanzar P0-02/P0-03
 
