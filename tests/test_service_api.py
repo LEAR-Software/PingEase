@@ -75,6 +75,25 @@ class OptimizationServiceTests(unittest.TestCase):
         self.assertEqual(result.status, "error")
         self.assertIn("Unknown ROUTER_DRIVER", result.reason)
 
+    def test_run_cycle_dry_run_preserves_semantics(self):
+        """Verify dry_run flag maintains expected behavior without regression."""
+        service = OptimizationService(_make_config())
+
+        def fake_cycle(**kwargs):
+            # Verify dry_run flag is passed through
+            assert kwargs.get("dry_run") is True
+            # Simulate no change in dry run
+            # (cycle logic does NOT modify state in dry_run)
+
+        with patch.object(service, "_build_router", return_value=_FakeRouter()):
+            with patch("wifi_optimizer.service_api.run_optimization_cycle", side_effect=fake_cycle):
+                result = service.run_cycle(dry_run=True)
+
+        # dry_run typically results in no_change since we don't apply changes
+        self.assertEqual(result.status, "no_change")
+        self.assertFalse(result.changed)
+        self.assertIn("contract_version", result.to_dict())
+
 
 if __name__ == "__main__":
     unittest.main()

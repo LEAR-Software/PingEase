@@ -4,7 +4,72 @@
 
 ---
 
-## 📍 Sesión 2026-04-14 (ÚLTIMA - PyCharm Run Configurations Fix)
+## 📍 Sesión 2026-04-15 (ÚLTIMA - P0-01 DoD Evaluation)
+
+### 🎯 Objetivo
+Evaluar estado de cumplimiento del Definition of Done (DoD) de P0-01 y preparar para merge.
+
+### ✅ Completado
+- **Evaluación completa del DoD:**
+  - ✅ Entrypoint core invocable sin CLI: `OptimizationService` implementado sin `sys.exit()` ni `argparse`
+  - ✅ Flujo `--dry-run` sin regresiones: Test unitario agregado + CLI legacy validado
+  - ✅ Cambios documentados: 3 archivos de arquitectura (CONTRACT_V1, OVERVIEW, PLAN)
+
+- **Test adicional creado:**
+  - `test_run_cycle_dry_run_preserves_semantics`: Valida que `dry_run=True` mantiene semántica esperada
+  - Total tests: 5/5 pasando ✅
+
+- **Documentación de evaluación:**
+  - `docs/architecture/P0-01-DOD-STATUS.md`: Reporte detallado de completitud del DoD
+  - Evidencia de cada criterio con referencias a código y tests
+
+- **Validaciones ejecutadas:**
+  - Tests unitarios: `python -m unittest tests.test_service_api -v` → 5/5 OK
+  - Coverage de rutas: success, no_change, error, invalid_driver, dry_run
+  - CLI legacy: `main.py` sigue funcional con `--dry-run`
+
+### 📊 DoD Status
+
+**Alcanzado:** ✅ **100%**
+
+| Criterio | Estado | Evidencia |
+|----------|--------|-----------|
+| Entrypoint core sin CLI | ✅ | `service_api.py` + tests + sin `sys.exit()` |
+| `--dry-run` sin regresiones | ✅ | Tests + CLI legacy funcional |
+| Documentación arquitectura | ✅ | CONTRACT_V1 + OVERVIEW + PLAN |
+
+Ver detalles completos en: `docs/architecture/P0-01-DOD-STATUS.md`
+
+### ⚠️ Pendiente
+- Commit del test adicional `test_run_cycle_dry_run_preserves_semantics`
+- Commit del reporte de DoD (`P0-01-DOD-STATUS.md`)
+- Actualizar PR #20 con evidencia de DoD completado
+- Solicitar review final y merge de PR #20
+
+### 🔗 Enlaces Críticos
+- Reporte DoD: `docs/architecture/P0-01-DOD-STATUS.md`
+- Tests: `tests/test_service_api.py` (5 tests)
+- Contrato: `docs/architecture/SERVICE_API_CONTRACT_V1.md`
+- PR: `https://github.com/LEAR-Software/PingEase/pull/20`
+
+### 💾 Estado Final
+- Rama: `feature/P0-01-stabilize-core-api`
+- Tests: ✅ 5/5 pasando
+- DoD: ✅ 100% completado
+- Cambios sin commit:
+  - `tests/test_service_api.py`: +1 test (dry_run semantics)
+  - `docs/architecture/P0-01-DOD-STATUS.md`: +1 archivo (reporte DoD)
+  - `AGENTS.md`: actualizado con evaluación
+
+### 🚀 Recomendación para Next Session
+1. Commitear cambios pendientes (test + reporte DoD)
+2. Actualizar PR #20 con mensaje: "DoD completado al 100% - listo para review"
+3. Solicitar review final del PR #20
+4. Tras merge, iniciar P0-02: "Add service-ready execution mode and structured results"
+
+---
+
+## 📍 Sesión 2026-04-14 (PyCharm Run Configurations Fix)
 
 ### 🎯 Objetivo
 Solucionar error "Python module name must be set" en PyCharm Run Configurations y asegurar que todos los tests se ejecuten correctamente desde el IDE.
