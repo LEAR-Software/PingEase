@@ -4,7 +4,94 @@
 
 ---
 
-## 📍 Sesión 2026-04-15 (ÚLTIMA - P0-01 DoD Evaluation)
+## 📍 Sesión 2026-04-15 (ÚLTIMA - P0-01 Complete + P0-02 Started)
+
+### 🎯 Objetivos
+1. Evaluar y completar DoD de P0-01
+2. Mergear PR #20
+3. Iniciar desarrollo de P0-02
+
+### ✅ Completado
+
+#### P0-01: DoD Evaluation y Merge
+- **DoD completado al 100%:**
+  - ✅ Entrypoint core invocable sin CLI
+  - ✅ Flujo `--dry-run` sin regresiones
+  - ✅ Documentación arquitectura completa
+- **Test adicional:** `test_run_cycle_dry_run_preserves_semantics`
+- **Documentación:** `P0-01-DOD-STATUS.md` creado
+- **Tests:** 5/5 pasando ✅
+- **PR #20 actualizado** con evidencia de DoD completado
+- **PR #20 MERGEADO** exitosamente a main
+  - Commit: `46b14ae` (squash merge)
+  - CI checks: 2/2 passing
+  - Branch `feature/P0-01-stabilize-core-api` eliminado
+
+#### P0-02: Service-Once Mode Implementation - ✅ COMPLETADO AL 100%
+- **Branch creado:** `feature/P0-02-service-execution-mode`
+- **Plan documentado:** `docs/architecture/P0-02-PLAN.md` (350+ líneas)
+- **Implementación completa:**
+  - Flag `--service-once` agregado a `main.py`
+  - Modo usa `OptimizationService.run_cycle()`
+  - Output JSON estructurado a stdout (contract v1)
+  - Exit codes apropiados (0 para success/no_change, 1 para error)
+  - Compatible con `--dry-run` flag
+- **Tests unitarios:** 9 tests nuevos en `test_service_once_mode.py`
+  - Total: **14/14 tests pasando** (P0-01: 5, P0-02: 9)
+- **Documentación:**
+  - `README.md` actualizado con ejemplos de `--service-once`
+  - `P0-02-DOD-STATUS.md` creado con evaluación completa del DoD
+- **PR #22 CREADO** y listo para review
+  - URL: https://github.com/LEAR-Software/PingEase/pull/22
+  - DoD: 100% completado
+  - Tests: 14/14 passing
+
+### 📊 Resumen de Cambios
+
+**Archivos modificados/creados en esta sesión:**
+
+P0-01 (mergeados a main):
+- `tests/test_service_api.py`: +1 test (dry_run semantics)
+- `docs/architecture/P0-01-DOD-STATUS.md`: +214 líneas
+- `AGENTS.md`: actualizado
+
+P0-02 (en branch feature):
+- `main.py`: +30 líneas (service-once mode)
+- `tests/test_service_once_mode.py`: +200 líneas (9 tests, nuevo archivo)
+- `README.md`: +20 líneas (documentación --service-once)
+- `docs/architecture/P0-02-PLAN.md`: +350 líneas (nuevo)
+- `docs/architecture/P0-02-DOD-STATUS.md`: +400 líneas (nuevo)
+
+### ✅ Todos los Objetivos Completados
+
+| Objetivo | Estado | Evidencia |
+|----------|--------|-----------|
+| Evaluar DoD P0-01 | ✅ | P0-01-DOD-STATUS.md (100%) |
+| Mergear PR #20 | ✅ | Mergeado a main (commit 46b14ae) |
+| Completar P0-02 | ✅ | PR #22 abierto, DoD 100% |
+
+### 🔗 Enlaces Críticos
+- **PR #20 (merged):** https://github.com/LEAR-Software/PingEase/pull/20
+- **PR #22 (open):** https://github.com/LEAR-Software/PingEase/pull/22
+- **Issue #2 (closed):** P0-01 Stabilize core API
+- **Issue #3 (open):** P0-02 Add service-ready execution mode
+- **Branch P0-02:** `feature/P0-02-service-execution-mode`
+
+### 💾 Estado Final
+- Rama actual: `feature/P0-02-service-execution-mode`
+- P0-01: ✅ 100% completado y mergeado
+- P0-02: ✅ 100% completado, PR #22 abierto
+- Tests: 14/14 pasando (5 de P0-01, 9 de P0-02)
+- Próximo: Review y merge de PR #22, luego P0-03
+
+### 🚀 Recomendación para Next Session
+1. Solicitar review de PR #22
+2. Mergear PR #22 tras aprobación
+3. Iniciar **P0-03**: "Define local IPC/API contract for UI <-> service"
+
+---
+
+## 📍 Sesión 2026-04-15 (P0-01 DoD Evaluation)
 
 ### 🎯 Objetivo
 Evaluar estado de cumplimiento del Definition of Done (DoD) de P0-01 y preparar para merge.

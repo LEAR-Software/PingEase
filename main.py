@@ -139,12 +139,13 @@ def _get_int_arg(args: list[str], flag: str, *, default: int | None) -> int | No
 # Entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
-    args    = sys.argv[1:]
-    dry_run = "--dry-run" in args
-    headed  = "--inspect" in args
-    once    = "--once"    in args or headed
-    monitor = "--monitor" in args
-    analyze = "--analyze" in args
+    args         = sys.argv[1:]
+    dry_run      = "--dry-run" in args
+    headed       = "--inspect" in args
+    once         = "--once"    in args or headed
+    monitor      = "--monitor" in args
+    analyze      = "--analyze" in args
+    service_once = "--service-once" in args
 
     # ── Monitor mode — completely independent from the optimizer ──────────
     # Checked BEFORE _build_router() so no router connection is attempted.
@@ -166,6 +167,55 @@ def main() -> None:
         top_n     = _get_int_arg(args, "--top-n",     default=8)
         run_analyze(tz_offset=tz_offset, top_n=top_n)
         return
+
+    # ── Service-once mode — single cycle with JSON output ─────────────────
+    # Designed for Windows service wrapper or IPC consumers.
+    if service_once:
+        import json
+        from wifi_optimizer.config import OptimizerConfig
+        from wifi_optimizer.service_api import CONTRACT_VERSION, OptimizationService
+
+        # Redirect console logging from stdout → stderr so that stdout
+        # contains only the structured JSON payload.
+        _root_logger = logging.getLogger()
+        for _h in list(_root_logger.handlers):
+            if isinstance(_h, logging.StreamHandler) and _h.stream is sys.stdout:
+                _root_logger.removeHandler(_h)
+                _stderr_handler = logging.StreamHandler(sys.stderr)
+                _stderr_handler.setFormatter(_h.formatter)
+                _root_logger.addHandler(_stderr_handler)
+                break
+
+        service = None
+        try:
+            # Load config from environment
+            config = OptimizerConfig.from_env()
+
+            # Instantiate service
+            service = OptimizationService(config)
+
+            # Run single cycle
+            result = service.run_cycle(dry_run=dry_run, headed=headed)
+
+            # Output structured JSON to stdout
+            print(json.dumps(result.to_dict(), indent=2))
+
+            # Exit with appropriate code
+            sys.exit(0 if result.status in ("success", "no_change") else 1)
+        except Exception as exc:
+            error_payload = {
+                "contract_version": CONTRACT_VERSION,
+                "status": "error",
+                "error": {
+                    "type": exc.__class__.__name__,
+                    "message": str(exc),
+                },
+            }
+            print(json.dumps(error_payload, indent=2))
+            sys.exit(1)
+        finally:
+            if service is not None:
+                service.shutdown()
 
     # ── Optimizer mode ────────────────────────────────────────────────────
     if dry_run:
@@ -219,7 +269,7 @@ def main() -> None:
     else:
         log.info(
             "Daemon mode started. Scan interval: %d s. Ctrl+C to stop. "
-            "Flags: --once | --dry-run | --inspect | --analyze",
+            "Flags: --once | --dry-run | --inspect | --analyze | --service-once",
             SCAN_INTERVAL_SECONDS,
         )
         while True:
