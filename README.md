@@ -151,6 +151,24 @@ python main.py --once                           # una vez
 # Dry run — ciclo completo sin tocar el router
 python main.py --once --dry-run
 
+# Modo service-once — salida JSON estructurada (para Windows service/IPC)
+python main.py --service-once               # producción
+python main.py --service-once --dry-run     # testing sin modificar router
+
+# Ejemplo de output JSON (--service-once):
+# {
+#   "contract_version": "v1",
+#   "status": "success",
+#   "changed": true,
+#   "reason": "Channel change applied.",
+#   "details": {
+#     "old_channel_24": 1,
+#     "new_channel_24": 11,
+#     "old_channel_5": 36,
+#     "new_channel_5": 40
+#   }
+# }
+
 # Modo inspect — abre el navegador visible para depurar selectores
 python main.py --inspect
 ```
@@ -161,6 +179,7 @@ python main.py --inspect
 |---|---|
 | *(ninguno)* | Modo daemon — loop continuo, Ctrl+C para detener |
 | `--once` | Un ciclo de optimización y termina |
+| `--service-once` | **[NUEVO]** Un ciclo con salida JSON estructurada (contract v1). Diseñado para Windows service wrapper y consumo por IPC/UI. Exit code: `0` si success/no_change, `1` si error. |
 | `--dry-run` | Ciclo completo (escaneo + score + ping) pero **sin cambios en el router** |
 | `--inspect` | Abre Chromium visible + guarda archivos HTML de diagnóstico |
 | `--monitor` | Modo observatorio — registra snapshots RF en `wifi_monitor.db` |
