@@ -173,7 +173,7 @@ def main() -> None:
     if service_once:
         import json
         from wifi_optimizer.config import OptimizerConfig
-        from wifi_optimizer.service_api import OptimizationService
+        from wifi_optimizer.service_api import CONTRACT_VERSION, OptimizationService
 
         # Redirect console logging from stdout → stderr so that stdout
         # contains only the structured JSON payload.
@@ -204,7 +204,7 @@ def main() -> None:
             sys.exit(0 if result.status in ("success", "no_change") else 1)
         except Exception as exc:
             error_payload = {
-                "contract_version": "v1",
+                "contract_version": CONTRACT_VERSION,
                 "status": "error",
                 "error": {
                     "type": exc.__class__.__name__,

@@ -14,7 +14,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 from wifi_optimizer.config import OptimizerConfig
-from wifi_optimizer.service_api import OptimizationResult, OptimizationService
+from wifi_optimizer.service_api import CONTRACT_VERSION, OptimizationResult, OptimizationService
+
+# Driver key that does not exist in the registry; used to trigger a
+# controlled error path without attempting a real network connection.
+_INVALID_TEST_DRIVER = "invalid_driver_for_test"
 
 
 class ServiceOnceModeIntegrationTests(unittest.TestCase):
@@ -39,7 +43,7 @@ class ServiceOnceModeIntegrationTests(unittest.TestCase):
         env = os.environ.copy()
         # Use an invalid driver so no real router connection is attempted;
         # the error is caught inside run_cycle() and returned as a structured result.
-        env["ROUTER_DRIVER"] = "invalid_driver_for_test"
+        env["ROUTER_DRIVER"] = _INVALID_TEST_DRIVER
         if env_override:
             env.update(env_override)
 
@@ -72,7 +76,7 @@ class ServiceOnceModeIntegrationTests(unittest.TestCase):
         stdout, _, _ = self._run_service_once()
         parsed = json.loads(stdout)
         self.assertIn("contract_version", parsed)
-        self.assertEqual(parsed["contract_version"], "v1")
+        self.assertEqual(parsed["contract_version"], CONTRACT_VERSION)
         self.assertIn("status", parsed)
 
     def test_service_once_error_exit_code_is_1(self):
@@ -108,7 +112,7 @@ class ServiceOnceModeIntegrationTests(unittest.TestCase):
         stdout, _, returncode = self._run_service_once(extra_args=["--dry-run"])
         parsed = json.loads(stdout)
         self.assertIn("contract_version", parsed)
-        self.assertEqual(parsed["contract_version"], "v1")
+        self.assertEqual(parsed["contract_version"], CONTRACT_VERSION)
         self.assertIn("status", parsed)
 
 class ServiceOnceModeUnitTests(unittest.TestCase):
@@ -129,7 +133,7 @@ class ServiceOnceModeUnitTests(unittest.TestCase):
 
         result_dict = result.to_dict()
         self.assertIn("contract_version", result_dict)
-        self.assertEqual(result_dict["contract_version"], "v1")
+        self.assertEqual(result_dict["contract_version"], CONTRACT_VERSION)
 
     def test_optimization_result_to_dict_has_all_fields(self):
         """Verify OptimizationResult.to_dict() has all required fields."""
@@ -212,7 +216,7 @@ class ServiceOnceModeUnitTests(unittest.TestCase):
 
         # Should be parseable back
         parsed = json.loads(json_str)
-        self.assertEqual(parsed["contract_version"], "v1")
+        self.assertEqual(parsed["contract_version"], CONTRACT_VERSION)
 
     def test_service_once_exit_code_logic_success(self):
         """Verify exit code logic for success status."""
