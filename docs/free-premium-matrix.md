@@ -16,6 +16,7 @@ Purpose: define product boundaries for PingEase without breaking MIT open-core o
 | Window analysis (`--analyze`) | Yes | Yes | Yes | Open-core repo | MIT notices required |
 | Dry-run optimization (`--once --dry-run`) | Yes | Yes | Yes | Open-core repo | MIT notices required |
 | Real router apply | Limited (trial/quota/profile limits) | Full | Full | Open-core behavior + premium gate outside repo | Validate final gating language with counsel |
+| Entitlement gate check | Denied (no token) | Allowed (valid token) | Allowed (valid token) | Premium layer only (`evaluate_entitlement`) — P0-07 | No open-core entitlement logic |
 | Emergency profile controls | Basic | Advanced | Advanced + policy packs | Premium layer | Commercial terms apply |
 | License activation (offline signed) | No | Yes | Yes | Premium layer | EULA + counsel review |
 | Online activation/revocation | No | Optional | Optional + admin | Premium services | Privacy/Terms + counsel review |
@@ -34,4 +35,11 @@ When changing tier behavior:
 2. Update `docs/open-core-boundary.md` if boundaries changed.
 3. Update `docs/compliance-criteria.md` checklist references.
 4. Mark legal-sensitive text as pending counsel if not yet validated.
+
+## P0-07 status (2026-04-15)
+
+- Entitlement gate boundary confirmed: gate lives entirely in `LEAR-Software/pingease-premium`.
+- Core issue: [#8](https://github.com/LEAR-Software/PingEase/issues/8)
+- Premium mirror: [#2](https://github.com/LEAR-Software/pingease-premium/issues/2)
+- Architecture note: `docs/architecture/P0-07-boundary-gate.md`
 

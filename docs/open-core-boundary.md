@@ -17,6 +17,7 @@ It is the product-boundary source of truth for this repository.
 - Commercial UI bundles and installer flows
 - Business-only orchestration and enterprise policies
 - Cloud services for licensing/telemetry (if any)
+- **Entitlement gate** (`evaluate_entitlement`, `EntitlementStatus`, `license_token` enforcement) — P0-07 confirmed in premium layer only
 
 ## P0 Matrix - Free vs Premium
 
@@ -38,6 +39,7 @@ Reference docs:
 - `docs/free-premium-matrix.md`
 - `docs/compliance-criteria.md`
 - `docs/mvp-windows-backlog.md`
+- `docs/architecture/P0-07-boundary-gate.md` (P0-07 entitlement gate architecture note)
 
 ## Non-negotiable Legal Rules
 
