@@ -4,7 +4,84 @@
 
 ---
 
-## 📍 Sesión 2026-04-15 (ÚLTIMA - P0-01 DoD Evaluation)
+## 📍 Sesión 2026-04-15 (ÚLTIMA - P0-01 Complete + P0-02 Started)
+
+### 🎯 Objetivos
+1. Evaluar y completar DoD de P0-01
+2. Mergear PR #20
+3. Iniciar desarrollo de P0-02
+
+### ✅ Completado
+
+#### P0-01: DoD Evaluation y Merge
+- **DoD completado al 100%:**
+  - ✅ Entrypoint core invocable sin CLI
+  - ✅ Flujo `--dry-run` sin regresiones
+  - ✅ Documentación arquitectura completa
+- **Test adicional:** `test_run_cycle_dry_run_preserves_semantics`
+- **Documentación:** `P0-01-DOD-STATUS.md` creado
+- **Tests:** 5/5 pasando ✅
+- **PR #20 actualizado** con evidencia de DoD completado
+- **PR #20 MERGEADO** exitosamente a main
+  - Commit: `46b14ae` (squash merge)
+  - CI checks: 2/2 passing
+  - Branch `feature/P0-01-stabilize-core-api` eliminado
+
+#### P0-02: Service-Once Mode Implementation
+- **Branch creado:** `feature/P0-02-service-execution-mode`
+- **Plan documentado:** `docs/architecture/P0-02-PLAN.md` (350+ líneas)
+- **Implementación inicial completada:**
+  - Flag `--service-once` agregado a `main.py`
+  - Modo usa `OptimizationService.run_cycle()`
+  - Output JSON estructurado a stdout
+  - Exit codes apropiados (0 para success/no_change, 1 para error)
+  - Compatible con `--dry-run` flag
+- **Commit:** `616dc41` - "feat(service): add --service-once CLI mode for structured JSON output"
+- **Pusheado a origin**
+
+### 📊 Resumen de Cambios
+
+**Archivos modificados/creados en esta sesión:**
+
+P0-01 (mergeados a main):
+- `tests/test_service_api.py`: +1 test (dry_run semantics)
+- `docs/architecture/P0-01-DOD-STATUS.md`: +214 líneas
+- `AGENTS.md`: actualizado
+
+P0-02 (en branch feature):
+- `main.py`: +30 líneas (service-once mode)
+- `docs/architecture/P0-02-PLAN.md`: +350 líneas (nuevo)
+
+### ⚠️ Pendiente
+
+**Para P0-02:**
+- [ ] Crear tests unitarios para `--service-once` mode
+- [ ] Actualizar README.md con documentación de `--service-once`
+- [ ] Crear `P0-02-DOD-STATUS.md` tras completar tests
+- [ ] Abrir PR para P0-02
+
+### 🔗 Enlaces Críticos
+- **PR #20 (merged):** https://github.com/LEAR-Software/PingEase/pull/20
+- **Issue #3 (P0-02):** https://github.com/LEAR-Software/PingEase/issues/3
+- **Branch P0-02:** `feature/P0-02-service-execution-mode`
+- **Commit P0-02:** `616dc41`
+
+### 💾 Estado Final
+- Rama actual: `feature/P0-02-service-execution-mode`
+- P0-01: ✅ 100% completado y mergeado
+- P0-02: 🚧 Implementación inicial (CLI mode + plan documentado)
+- Próximo: Tests unitarios para `--service-once`
+
+### 🚀 Recomendación para Next Session
+1. Crear tests unitarios para `--service-once` mode en `tests/test_service_once_mode.py`
+2. Validar JSON output y exit codes
+3. Actualizar README.md con ejemplos de uso
+4. Crear DoD status report para P0-02
+5. Abrir PR para review
+
+---
+
+## 📍 Sesión 2026-04-15 (P0-01 DoD Evaluation)
 
 ### 🎯 Objetivo
 Evaluar estado de cumplimiento del Definition of Done (DoD) de P0-01 y preparar para merge.
