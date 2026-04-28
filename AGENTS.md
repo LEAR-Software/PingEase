@@ -4,6 +4,141 @@
 
 ---
 
+## 📍 Sesión 2026-04-28 (P0-03 Review Completion — GitHub Copilot Analysis)
+
+### 🧩 Objetivo Principal
+Revisar y documentar los hallazgos de GitHub Copilot en PR #23, validar que todos los fixes fueron aplicados correctamente, y confirmar readiness para P0-04.
+
+### ✅ Completado
+- **Revisión de PR #23 analizada en detalle:**
+  - 1 HIGH finding (import chain): ✅ RESUELTO via TYPE_CHECKING guard
+  - 2 MEDIUM findings: ✅ RESUELTOS (test coverage + docs)
+  - 3 residual risks documentados: ℹ️ NO-BLOCKING (pre-existentes)
+  
+- **HIGH: Importación hard de OptimizationService**
+  - Problema: `ipc_adapter.py:11` causaba ruptura de test discovery
+  - Cadena: `OptimizationService → service_api → huawei_hg8145x6 → playwright`
+  - Fix: `TYPE_CHECKING` guard + `from __future__ import annotations`
+  - Verificación: Test discovery funciona en todos los entornos ✅
+
+- **MEDIUM #1: 8 Test Coverage Gaps**
+  - Cases faltantes: contract_version missing, blank command, null params, non-bool params, etc.
+  - Todos agregados y pasando en `tests/test_ipc_adapter.py`
+  - Verificación: 20/20 tests pasando ✅
+
+- **MEDIUM #2: Doc Inconsistency**
+  - Problema: Examples A y B no mostraban pares request/response completos
+  - Fix: `docs/architecture/service-api-contract.md` ahora contiene ejemplos pareados
+  - Verificación: Docs self-contained y consistentes ✅
+
+- **Residual Risks Documentados:**
+  - UTF-8 BOM en archivos Python (pre-existente, no P0-03)
+  - Exception messages en error responses (acceptable para local IPC, sanitizar antes de network)
+  - Protocol vs domain error separation (verificado correcto)
+
+- **Documentación Generada:**
+  - Archivo: `docs/architecture/PR-23-REVIEW-ANALYSIS.md` (403 líneas)
+  - Contiene: hallazgos, fixes, verificación, recomendaciones, test matrix
+  - Commit: `4c14ae3` (`docs: add comprehensive PR #23 review analysis from GitHub Copilot`)
+
+### 🔍 Hallazgos Validados
+| Severidad | Cantidad | Estado | Archivos |
+|-----------|----------|--------|----------|
+| HIGH | 1 | ✅ Resuelto | ipc_adapter.py:11 |
+| MEDIUM | 2 | ✅ Resuelto | ipc_adapter.py, test_ipc_adapter.py, docs |
+| RESIDUAL | 3 | ℹ️ INFO | (non-blocking) |
+
+### 📊 Test Results
+- **Total tests:** 20/20 pasando ✅
+- **CodeQL alerts:** 0 ✅
+- **Test suite:** `python -m unittest tests.test_ipc_adapter -v` → OK
+
+### 💾 Cambios Git
+- Commit: `4c14ae3` (análisis de revisión)
+- Push: ✅ Completado a `feature/P0-04-windows-service-skeleton`
+
+### ⚠️ Pendiente
+- Nada. Revisión completada, lista para P0-04 kickoff.
+
+### 🔗 Enlaces Críticos
+- PR #23: https://github.com/LEAR-Software/PingEase/pull/23
+- Review Analysis: `docs/architecture/PR-23-REVIEW-ANALYSIS.md`
+- IPC Adapter: `wifi_optimizer/ipc_adapter.py`
+- Tests: `tests/test_ipc_adapter.py` (20 tests)
+
+### 🚀 Recomendación para Next Session
+1. Continuar con P0-04 service skeleton (ya iniciado en rama actual)
+2. Implementar bootstrap handshake para ephemeral session secret
+3. Crear HTTP transport wrapper sobre ServiceRunner
+4. Tests end-to-end UI ↔ Service
+
+### 💡 Notas
+- Revisión de Copilot fue completa y constructiva
+- Todos los hallazgos fueron atendidos antes del merge
+- Código está en estado production-ready para MVP
+- Transport-agnostic design permite flexibilidad futura
+
+---
+
+## 📍 Sesión 2026-04-28 (P0-04 — Windows Service Skeleton)
+
+### 🧩 Issue en Trabajo (obligatorio)
+- Repo: `LEAR-Software/PingEase`
+- Issue: `#5 [P0-04] Implement Windows service skeleton`
+
+### 🌿 Rama de Sesión (obligatorio)
+- Rama: `feature/P0-04-windows-service-skeleton`
+- Base: `main` (post merge de P0-03 #23)
+
+### 🎯 Objetivo
+Implementar el skeleton de servicio Windows con IPC HTTP local y handshake HMAC de sesión efímera.
+
+### ✅ Completado
+- **PR #23 (P0-03) mergeado** a main con squash ✅
+- **Rama P0-04 creada** desde main actualizado
+- **`wifi_optimizer/service_runner.py` implementado:**
+  - `ServiceRunner`: HTTP server en puerto aleatorio de localhost
+  - Credenciales efímeras (`session_id` + `session_secret`) con `secrets.token_hex`
+  - Bootstrap file `%TEMP%\pingease-service.json` escrito al arrancar, eliminado al parar
+  - `GET /health` → `{"ok": true, "status": "running", "ts_ms": ...}`
+  - `POST /ipc` → `handle_request()` con HMAC-SHA256-v1
+  - Log rotativo con `logging.handlers.RotatingFileHandler` (5 MiB × 3 archivos)
+  - `run_forever()` bloquea hasta `stop()` o `KeyboardInterrupt`
+- **`main.py` actualizado:** flag `--service` despacha a `ServiceRunner.run_forever()`
+- **`tests/test_service_runner.py` creado:** 20 tests
+  - `TestBootstrapHelpers` (4): write, remove, idempotencia, path
+  - `TestServiceRunnerLifecycle` (6): start crea bootstrap, stop borra bootstrap, is_running, double start raises, credenciales únicas, puerto disponible
+  - `TestHealthEndpoint` (2): 200 ok, 404 desconocido
+  - `TestIPCEndpointNoAuth` (4): run_cycle ok, versión inválida, comando no soportado, JSON inválido
+  - `TestIPCEndpointWithAuth` (4): request firmado ok, auth faltante, firma errónea, replay
+- **`docs/architecture/P0-04-PLAN.md` creado:** diseño, DoD, limitaciones
+- **`docs/architecture/IPC-SESSION-HANDSHAKE-GAP.md` actualizado:** marcado como Resuelto en P0-04
+- **Validación final:**
+  - `python -u -m unittest tests.test_service_runner tests.test_ipc_adapter tests.test_service_api tests.test_service_once_mode -v`
+  - Resultado: **60/60 tests pasando** ✅
+- **PR #24 abierto:** https://github.com/LEAR-Software/PingEase/pull/24
+
+### ⚠️ Pendiente
+- Merge PR #24 tras CI + review
+- Iniciar P0-05: Windows secrets baseline
+
+### 🔗 Enlaces Críticos
+- Service runner: `wifi_optimizer/service_runner.py`
+- Tests P0-04: `tests/test_service_runner.py`
+- Plan: `docs/architecture/P0-04-PLAN.md`
+- PR #24: https://github.com/LEAR-Software/PingEase/pull/24
+
+### 💾 Estado Final
+- Rama: `feature/P0-04-windows-service-skeleton`
+- Tests: ✅ 60/60 pasando
+- PR #24: abierto, CI pendiente
+
+### 🚀 Recomendación para Next Session
+1. Revisar CI de PR #24 y mergear.
+2. Iniciar P0-05: secrets baseline (docs/architecture/secrets.md).
+
+---
+
 ## 📍 Sesión 2026-04-27 (P0-03 Kickoff - Local IPC Contract Draft)
 
 ### 🧩 Issue en Trabajo (obligatorio)
@@ -554,6 +689,6 @@ Cuando continúes, actualiza esta sección con:
 ---
 
 **Última Actualización:** 2026-04-28  
-**Sesión:** P0-03 — CERRADA ✅  
-**Status:** PR #23 abierto, 40/40 tests verdes, HMAC auth documentada, gap P0-04 registrado  
-**Próxima:** Merge PR #23 → iniciar P0-04 (Windows service skeleton + session handshake)
+**Sesión:** P0-04 — EN PROGRESO  
+**Status:** PR #24 abierto, 60/60 tests verdes, service skeleton implementado  
+**Próxima:** Merge PR #24 → iniciar P0-05 (Windows secrets baseline)
