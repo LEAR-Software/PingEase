@@ -4,6 +4,65 @@
 
 ---
 
+## 📍 Sesión 2026-04-28 (P0-04 — Windows Service Skeleton)
+
+### 🧩 Issue en Trabajo (obligatorio)
+- Repo: `LEAR-Software/PingEase`
+- Issue: `#5 [P0-04] Implement Windows service skeleton`
+
+### 🌿 Rama de Sesión (obligatorio)
+- Rama: `feature/P0-04-windows-service-skeleton`
+- Base: `main` (post merge de P0-03 #23)
+
+### 🎯 Objetivo
+Implementar el skeleton de servicio Windows con IPC HTTP local y handshake HMAC de sesión efímera.
+
+### ✅ Completado
+- **PR #23 (P0-03) mergeado** a main con squash ✅
+- **Rama P0-04 creada** desde main actualizado
+- **`wifi_optimizer/service_runner.py` implementado:**
+  - `ServiceRunner`: HTTP server en puerto aleatorio de localhost
+  - Credenciales efímeras (`session_id` + `session_secret`) con `secrets.token_hex`
+  - Bootstrap file `%TEMP%\pingease-service.json` escrito al arrancar, eliminado al parar
+  - `GET /health` → `{"ok": true, "status": "running", "ts_ms": ...}`
+  - `POST /ipc` → `handle_request()` con HMAC-SHA256-v1
+  - Log rotativo con `logging.handlers.RotatingFileHandler` (5 MiB × 3 archivos)
+  - `run_forever()` bloquea hasta `stop()` o `KeyboardInterrupt`
+- **`main.py` actualizado:** flag `--service` despacha a `ServiceRunner.run_forever()`
+- **`tests/test_service_runner.py` creado:** 20 tests
+  - `TestBootstrapHelpers` (4): write, remove, idempotencia, path
+  - `TestServiceRunnerLifecycle` (6): start crea bootstrap, stop borra bootstrap, is_running, double start raises, credenciales únicas, puerto disponible
+  - `TestHealthEndpoint` (2): 200 ok, 404 desconocido
+  - `TestIPCEndpointNoAuth` (4): run_cycle ok, versión inválida, comando no soportado, JSON inválido
+  - `TestIPCEndpointWithAuth` (4): request firmado ok, auth faltante, firma errónea, replay
+- **`docs/architecture/P0-04-PLAN.md` creado:** diseño, DoD, limitaciones
+- **`docs/architecture/IPC-SESSION-HANDSHAKE-GAP.md` actualizado:** marcado como Resuelto en P0-04
+- **Validación final:**
+  - `python -u -m unittest tests.test_service_runner tests.test_ipc_adapter tests.test_service_api tests.test_service_once_mode -v`
+  - Resultado: **60/60 tests pasando** ✅
+- **PR #24 abierto:** https://github.com/LEAR-Software/PingEase/pull/24
+
+### ⚠️ Pendiente
+- Merge PR #24 tras CI + review
+- Iniciar P0-05: Windows secrets baseline
+
+### 🔗 Enlaces Críticos
+- Service runner: `wifi_optimizer/service_runner.py`
+- Tests P0-04: `tests/test_service_runner.py`
+- Plan: `docs/architecture/P0-04-PLAN.md`
+- PR #24: https://github.com/LEAR-Software/PingEase/pull/24
+
+### 💾 Estado Final
+- Rama: `feature/P0-04-windows-service-skeleton`
+- Tests: ✅ 60/60 pasando
+- PR #24: abierto, CI pendiente
+
+### 🚀 Recomendación para Next Session
+1. Revisar CI de PR #24 y mergear.
+2. Iniciar P0-05: secrets baseline (docs/architecture/secrets.md).
+
+---
+
 ## 📍 Sesión 2026-04-27 (P0-03 Kickoff - Local IPC Contract Draft)
 
 ### 🧩 Issue en Trabajo (obligatorio)
@@ -554,6 +613,6 @@ Cuando continúes, actualiza esta sección con:
 ---
 
 **Última Actualización:** 2026-04-28  
-**Sesión:** P0-03 — CERRADA ✅  
-**Status:** PR #23 abierto, 40/40 tests verdes, HMAC auth documentada, gap P0-04 registrado  
-**Próxima:** Merge PR #23 → iniciar P0-04 (Windows service skeleton + session handshake)
+**Sesión:** P0-04 — EN PROGRESO  
+**Status:** PR #24 abierto, 60/60 tests verdes, service skeleton implementado  
+**Próxima:** Merge PR #24 → iniciar P0-05 (Windows secrets baseline)
