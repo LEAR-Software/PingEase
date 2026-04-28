@@ -31,3 +31,10 @@ Thanks for contributing to PingEase.
 - Update docs when behavior or compliance obligations change.
 - For roadmap items, create issues using `.github/ISSUE_TEMPLATE/backlog-p0-p1-p2.md`.
 
+## Session and Branch Discipline (required)
+
+- Every development session must be tied to one active issue.
+- Work must happen on a dedicated branch (never directly on `main`).
+- Branch naming format: `<type>/Pn-XX-short-slug` where `<type>` is `feature|fix|docs|chore`.
+- Record issue + branch in `AGENTS.md` at session start and update final status before ending the session.
+

@@ -1,4 +1,4 @@
-﻿"""
+"""
 main.py — entry point for WiFi Channel Optimizer.
 
 All business logic lives in the wifi_optimizer/ package.

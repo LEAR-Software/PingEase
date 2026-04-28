@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tests for --service-once CLI mode.
 
 Validates that the service-once mode produces structured JSON output
@@ -114,6 +114,7 @@ class ServiceOnceModeIntegrationTests(unittest.TestCase):
         self.assertIn("contract_version", parsed)
         self.assertEqual(parsed["contract_version"], CONTRACT_VERSION)
         self.assertIn("status", parsed)
+
 
 class ServiceOnceModeUnitTests(unittest.TestCase):
     """

@@ -1,4 +1,4 @@
-﻿# P0-02: Add Service-Ready Execution Mode and Structured Results
+# P0-02: Add Service-Ready Execution Mode and Structured Results
 
 **Issue:** [#3](https://github.com/LEAR-Software/PingEase/issues/3)  
 **Branch:** `feature/P0-02-service-execution-mode`  

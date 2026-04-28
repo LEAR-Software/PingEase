@@ -20,23 +20,45 @@ El backlog MVP de PingEase está organizado en **3 prioridades** y se gestiona a
 
 ## 🚀 Flujo de Trabajo
 
+### Regla Operativa Obligatoria (Sesion = 1 issue + 1 rama)
+
+- No se inicia sesion de desarrollo sin issue activo asignado.
+- No se trabaja en `main`; cada issue debe tener rama dedicada.
+- Si una sesion cambia de objetivo, se cierra registro de la sesion actual y se abre nueva sesion con otro issue/rama.
+- Excepcion permitida: hotfix urgente, documentado en `AGENTS.md` con justificacion.
+
+Formato recomendado de ramas:
+
+- `feature/P0-03-local-ipc-contract`
+- `fix/P1-04-router-state-bug`
+- `docs/P1-05-architecture-alignment`
+- `chore/P0-08-ci-hardening`
+
 ### 1. Tomar un Issue
 
 ```bash
 # 1. En GitHub: buscar issue sin asignar (filtrar por label "P0", "P1", o "P2")
 # 2. Asignarte a ti mismo: click "Assign me"
 # 3. Mover a "In Progress" en el project board
+# 4. Confirmar numero de issue que se trabajara en la sesion
 ```
 
 ### 2. Crear Feature Branch
 
 ```bash
-# Usar patrón: feature/Pn-XX-short-description
+# Usar patron: <tipo>/Pn-XX-short-description
+# Tipos permitidos: feature | fix | docs | chore
 git checkout -b feature/P0-01-stabilize-core-api
 
 # O si es fix: fix/Pn-XX-description
 git checkout -b fix/P0-01-core-api-bug
 ```
+
+### Checklist de inicio de sesion (bloqueante)
+
+- [ ] Issue asignado y en `In Progress`.
+- [ ] Rama creada segun patron `<tipo>/Pn-XX-slug`.
+- [ ] `AGENTS.md` actualizado con issue y rama de la sesion.
 
 ### 3. Implementar y Testear
 
@@ -81,6 +103,12 @@ git push origin feature/P0-01-stabilize-core-api
 - [ ] CI checks (compile + audit) en verde
 - [ ] Branch protection: al menos 1 aprobación requerida
 - Merge a `main` (squash o rebase según política)
+
+### Checklist de cierre de sesion
+
+- [ ] Estado del issue actualizado (comentario con avance/bloqueos).
+- [ ] Estado del project board actualizado (`In Progress`, `In Review` o `Done`).
+- [ ] `AGENTS.md` actualizado con resultados y proxima accion.
 
 ---
 
@@ -127,6 +155,7 @@ main (protegida)
 **Reglas:**
 - Nunca commitear directamente a `main`
 - Siempre crear feature/fix branch desde `main`
+- Cada rama debe mapear a un issue especifico (1:1 durante la sesion)
 - Rebase antes de merge para mantener historia limpia
 - Eliminar branch después de merge
 
