@@ -3,6 +3,10 @@
 ## Related Issue(s)
 <!-- Link to related backlog issue(s): Fixes #XX -->
 
+## Session Traceability
+- Session issue: <!-- #XX -->
+- Working branch: <!-- type/Pn-XX-short-slug -->
+
 ## Cross-Repo Traceability (required if roadmap-impacting)
 - Peer repository: <!-- LEAR-Software/PingEase | LEAR-Software/pingease-premium -->
 - Peer issue: <!-- URL or #id -->
@@ -54,6 +58,7 @@
 - [ ] All GitHub Actions checks pass (CI, audit, etc.)
 - [ ] No merge conflicts
 - [ ] If needed, rebased onto latest `main`
+- [ ] Branch name is aligned with related issue (`<type>/Pn-XX-*`)
 
 ### Documentation (if applicable)
 - [ ] Architecture docs updated if behavior changes

@@ -4,6 +4,65 @@
 
 ---
 
+## 📍 Sesión 2026-04-27 (P0-03 Kickoff - Local IPC Contract Draft)
+
+### 🧩 Issue en Trabajo (obligatorio)
+- Repo: `LEAR-Software/PingEase`
+- Issue: `P0-03 Define local IPC/API contract for UI <-> service` (número en tracker)
+
+### 🌿 Rama de Sesión (obligatorio)
+- Rama: `feature/P0-03-local-ipc-adapter`
+- Base: `feature/P0-02-service-execution-mode`
+
+### 🎯 Objetivo
+Iniciar P0-03 definiendo el contrato local UI <-> service sin romper el contrato core (`OptimizationResult`).
+
+### ✅ Completado
+- **Validación técnica rápida ejecutada:**
+  - `python -u -m unittest tests.test_service_api tests.test_service_once_mode -v`
+  - Resultado: **14/14 tests pasando** ✅
+- **Contrato P0-03 documentado (borrador v1):**
+  - Nuevo archivo: `docs/architecture/service-api-contract.md`
+  - Incluye:
+    - Envelope de request (`contract_version`, `request_id`, `command`, `params`)
+    - Envelope de response (`ok`, `result`, `error`)
+    - Modelo de errores de protocolo (`INVALID_REQUEST`, `UNSUPPORTED_COMMAND`, etc.)
+    - Regla de compatibilidad con `SERVICE_API_CONTRACT_V1.md`
+    - Ejemplos JSON para `run_cycle` y error por comando no soportado
+- **Adaptador IPC mínimo implementado (transporte agnóstico):**
+  - Nuevo archivo: `wifi_optimizer/ipc_adapter.py`
+  - Dispatcher `handle_request(...)` con validación de envelope v1
+  - Soporte de comando `run_cycle` + defaults (`dry_run=false`, `headed=false`)
+  - Separación explícita protocolo (`ok=false`) vs dominio (`result.status="error"`)
+- **Tests unitarios de adaptador IPC agregados:**
+  - Nuevo archivo: `tests/test_ipc_adapter.py`
+  - Cobertura: request inválido, versión no soportada, comando no soportado, params inválidos, happy path, excepción de servicio
+- **Validación final ejecutada:**
+  - `python -u -m unittest tests.test_ipc_adapter tests.test_service_api tests.test_service_once_mode -v`
+  - Resultado: **21/21 tests pasando** ✅
+
+### ⚠️ Pendiente
+- Elegir transporte MVP para P0-03/P0-04 (`localhost HTTP` vs `named pipe` vs `stdio`).
+- Integrar `ipc_adapter` en un wrapper ejecutable (P0-04 service skeleton).
+- Abrir PR de P0-03 con evidencia de tests y trazabilidad issue-rama.
+
+### 🔗 Enlaces Críticos
+- Contrato core actual: `docs/architecture/SERVICE_API_CONTRACT_V1.md`
+- Contrato IPC local (nuevo): `docs/architecture/service-api-contract.md`
+- Backlog: `docs/mvp-windows-backlog.md` (P0-03)
+
+### 💾 Estado Final
+- Rama: `feature/P0-03-local-ipc-adapter`
+- Estado funcional: base de servicio estable, tests en verde (21/21)
+- Siguiente hito: implementar primer adaptador IPC local sobre contrato v1
+
+### 🚀 Recomendación para Next Session
+1. Definir transporte MVP (recomendación: `localhost HTTP` para iteración rápida).
+2. Crear `ipc_adapter` mínimo que valide envelope y despache `run_cycle`.
+3. Añadir tests de contrato de request/response y errores de protocolo.
+
+---
+
 ## 📍 Sesión 2026-04-15 (ÚLTIMA - P0-01 Complete + P0-02 Started)
 
 ### 🎯 Objetivos
@@ -454,6 +513,14 @@ Cuando continúes, actualiza esta sección con:
 ```markdown
 ## 📍 Sesión YYYY-MM-DD
 
+### 🧩 Issue en Trabajo (obligatorio)
+- Repo: [LEAR-Software/PingEase | LEAR-Software/pingease-premium]
+- Issue: [#numero + titulo]
+
+### 🌿 Rama de Sesión (obligatorio)
+- Rama: [tipo/Pn-XX-slug]
+- Base: [main u otra justificada]
+
 ### 🎯 Objetivo
 [Qué se va a hacer en esta sesión]
 
@@ -470,6 +537,7 @@ Cuando continúes, actualiza esta sección con:
 
 ### 💾 Estado Final
 - Rama: [rama actual]
+- Issue: [estado final del issue]
 - PR: [número si aplica]
 - Cambios: [resumen de cambios]
 
@@ -479,8 +547,7 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-14 14:35 UTC  
-**Sesión:** P0-01 Contract Stabilization en `service_api` + tests unitarios  
-**Status:** ✅ Completada (código/tests/PR y contrato `v1` documentado)  
-**Próxima:** Definir semántica `dry_run` y avanzar P0-02/P0-03
-
+**Última Actualización:** 2026-04-27 19:10 UTC  
+**Sesión:** P0-03 implementación de `ipc_adapter` + tests de contrato/envelope  
+**Status:** ✅ En progreso controlado (contrato + adaptador mínimo + tests en verde)  
+**Próxima:** Integrar el adaptador en wrapper de transporte (HTTP/pipe/stdio) para P0-04
