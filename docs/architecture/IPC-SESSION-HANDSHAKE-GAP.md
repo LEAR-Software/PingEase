@@ -1,6 +1,6 @@
 ﻿# IPC Session Handshake — Gap Documentation
 
-**Status:** Documented gap — implementation deferred to P0-04  
+**Status:** ✅ Resolved in P0-04 (`wifi_optimizer/service_runner.py` — bootstrap file approach)  
 **Related issue:** [#5 \[P0-04\] Implement Windows service skeleton](https://github.com/LEAR-Software/PingEase/issues/5)  
 **Context:** Identified during P0-03 hardening of `wifi_optimizer/ipc_adapter.py` with HMAC per-session auth.
 
