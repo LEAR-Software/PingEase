@@ -34,7 +34,6 @@ import logging
 import logging.handlers
 import os
 import secrets
-import socket
 import tempfile
 import threading
 import time

@@ -9,7 +9,6 @@ import time
 import urllib.request
 import urllib.error
 import unittest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from wifi_optimizer.ipc_adapter import compute_auth_signature, reset_auth_nonce_cache
