@@ -131,6 +131,7 @@ This separates protocol failure (`ok=false`) from domain execution outcome (`res
 
 ### Example A: `dry_run=true`
 
+**Request:**
 ```json
 {
   "contract_version": "v1",
@@ -142,8 +143,35 @@ This separates protocol failure (`ok=false`) from domain execution outcome (`res
 }
 ```
 
+**Response:**
+```json
+{
+  "contract_version": "v1",
+  "request_id": "ui-001",
+  "ok": true,
+  "result": {
+    "contract_version": "v1",
+    "status": "no_change",
+    "changed": false,
+    "reason": "No channel change applied.",
+    "details": {}
+  },
+  "error": null
+}
+```
+
 ### Example B: Unsupported command
 
+**Request:**
+```json
+{
+  "contract_version": "v1",
+  "request_id": "ui-002",
+  "command": "reboot_router"
+}
+```
+
+**Response:**
 ```json
 {
   "contract_version": "v1",

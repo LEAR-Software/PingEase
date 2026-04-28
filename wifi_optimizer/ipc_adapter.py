@@ -6,9 +6,10 @@ reuse `handle_request` without changing protocol behavior.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from wifi_optimizer.service_api import OptimizationService
+if TYPE_CHECKING:
+    from wifi_optimizer.service_api import OptimizationService
 
 CONTRACT_VERSION = "v1"
 COMMAND_RUN_CYCLE = "run_cycle"
