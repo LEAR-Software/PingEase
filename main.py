@@ -1,4 +1,4 @@
-﻿"""
+"""
 main.py — entry point for WiFi Channel Optimizer.
 
 All business logic lives in the wifi_optimizer/ package.
@@ -173,25 +173,49 @@ def main() -> None:
     if service_once:
         import json
         from wifi_optimizer.config import OptimizerConfig
-        from wifi_optimizer.service_api import OptimizationService
+        from wifi_optimizer.service_api import CONTRACT_VERSION, OptimizationService
 
-        # Load config from environment
-        config = OptimizerConfig.from_env()
+        # Redirect console logging from stdout → stderr so that stdout
+        # contains only the structured JSON payload.
+        _root_logger = logging.getLogger()
+        for _h in list(_root_logger.handlers):
+            if isinstance(_h, logging.StreamHandler) and _h.stream is sys.stdout:
+                _root_logger.removeHandler(_h)
+                _stderr_handler = logging.StreamHandler(sys.stderr)
+                _stderr_handler.setFormatter(_h.formatter)
+                _root_logger.addHandler(_stderr_handler)
+                break
 
-        # Instantiate service
-        service = OptimizationService(config)
+        service = None
+        try:
+            # Load config from environment
+            config = OptimizerConfig.from_env()
 
-        # Run single cycle
-        result = service.run_cycle(dry_run=dry_run, headed=headed)
+            # Instantiate service
+            service = OptimizationService(config)
 
-        # Output structured JSON to stdout
-        print(json.dumps(result.to_dict(), indent=2))
+            # Run single cycle
+            result = service.run_cycle(dry_run=dry_run, headed=headed)
 
-        # Shutdown service
-        service.shutdown()
+            # Output structured JSON to stdout
+            print(json.dumps(result.to_dict(), indent=2))
 
-        # Exit with appropriate code
-        sys.exit(0 if result.status in ("success", "no_change") else 1)
+            # Exit with appropriate code
+            sys.exit(0 if result.status in ("success", "no_change") else 1)
+        except Exception as exc:
+            error_payload = {
+                "contract_version": CONTRACT_VERSION,
+                "status": "error",
+                "error": {
+                    "type": exc.__class__.__name__,
+                    "message": str(exc),
+                },
+            }
+            print(json.dumps(error_payload, indent=2))
+            sys.exit(1)
+        finally:
+            if service is not None:
+                service.shutdown()
 
     # ── Optimizer mode ────────────────────────────────────────────────────
     if dry_run:

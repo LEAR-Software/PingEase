@@ -1,4 +1,4 @@
-﻿"""
+"""
 Tests for --service-once CLI mode.
 
 Validates that the service-once mode produces structured JSON output
@@ -6,14 +6,19 @@ with appropriate exit codes for different execution scenarios.
 """
 
 import json
+import os
 import subprocess
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
-from wifi_optimizer.service_api import OptimizationResult, OptimizationService
 from wifi_optimizer.config import OptimizerConfig
+from wifi_optimizer.service_api import CONTRACT_VERSION, OptimizationResult, OptimizationService
+
+# Driver key that does not exist in the registry; used to trigger a
+# controlled error path without attempting a real network connection.
+_INVALID_TEST_DRIVER = "invalid_driver_for_test"
 
 
 class ServiceOnceModeIntegrationTests(unittest.TestCase):
@@ -28,6 +33,88 @@ class ServiceOnceModeIntegrationTests(unittest.TestCase):
         """Set up test fixtures."""
         self.project_root = Path(__file__).parent.parent
         self.main_py = self.project_root / "main.py"
+
+    def _run_service_once(self, env_override=None, extra_args=None):
+        """Run main.py --service-once as a subprocess.
+
+        Returns:
+            tuple: (stdout, stderr, returncode)
+        """
+        env = os.environ.copy()
+        # Use an invalid driver so no real router connection is attempted;
+        # the error is caught inside run_cycle() and returned as a structured result.
+        env["ROUTER_DRIVER"] = _INVALID_TEST_DRIVER
+        if env_override:
+            env.update(env_override)
+
+        cmd = [sys.executable, str(self.main_py), "--service-once"]
+        if extra_args:
+            cmd.extend(extra_args)
+
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=30,
+        )
+        return proc.stdout, proc.stderr, proc.returncode
+
+    def test_service_once_stdout_is_valid_json(self):
+        """stdout must be valid JSON when an error occurs (invalid driver)."""
+        stdout, _, _ = self._run_service_once()
+        try:
+            parsed = json.loads(stdout)
+        except json.JSONDecodeError as exc:
+            self.fail(
+                f"stdout is not valid JSON: {exc}\nstdout was:\n{stdout!r}"
+            )
+        self.assertIsInstance(parsed, dict)
+
+    def test_service_once_stdout_has_required_fields(self):
+        """JSON output must include all contract-v1 required fields."""
+        stdout, _, _ = self._run_service_once()
+        parsed = json.loads(stdout)
+        self.assertIn("contract_version", parsed)
+        self.assertEqual(parsed["contract_version"], CONTRACT_VERSION)
+        self.assertIn("status", parsed)
+
+    def test_service_once_error_exit_code_is_1(self):
+        """Exit code must be 1 when status is 'error'."""
+        _, _, returncode = self._run_service_once()
+        self.assertEqual(returncode, 1)
+
+    def test_service_once_stdout_contains_only_json(self):
+        """stdout must contain only the JSON payload — no log lines."""
+        stdout, stderr, _ = self._run_service_once()
+        # The entire stdout must parse as valid JSON (no timestamp log lines).
+        try:
+            json.loads(stdout)
+        except json.JSONDecodeError as exc:
+            self.fail(
+                f"stdout is not valid JSON — log lines may be polluting stdout: {exc}\n"
+                f"stdout was:\n{stdout!r}"
+            )
+
+    def test_service_once_log_messages_go_to_stderr(self):
+        """Log messages must be written to stderr, not stdout."""
+        stdout, stderr, _ = self._run_service_once()
+        # stdout must be parseable as JSON (no log lines mixed in)
+        json.loads(stdout)
+        # stderr should contain diagnostic output from the logger
+        self.assertTrue(
+            len(stderr) > 0,
+            "Expected log/diagnostic messages in stderr, but stderr was empty",
+        )
+
+    def test_service_once_with_dry_run_flag(self):
+        """--service-once --dry-run must also produce valid JSON output."""
+        stdout, _, returncode = self._run_service_once(extra_args=["--dry-run"])
+        parsed = json.loads(stdout)
+        self.assertIn("contract_version", parsed)
+        self.assertEqual(parsed["contract_version"], CONTRACT_VERSION)
+        self.assertIn("status", parsed)
+
 
 class ServiceOnceModeUnitTests(unittest.TestCase):
     """
@@ -47,7 +134,7 @@ class ServiceOnceModeUnitTests(unittest.TestCase):
 
         result_dict = result.to_dict()
         self.assertIn("contract_version", result_dict)
-        self.assertEqual(result_dict["contract_version"], "v1")
+        self.assertEqual(result_dict["contract_version"], CONTRACT_VERSION)
 
     def test_optimization_result_to_dict_has_all_fields(self):
         """Verify OptimizationResult.to_dict() has all required fields."""
@@ -130,7 +217,7 @@ class ServiceOnceModeUnitTests(unittest.TestCase):
 
         # Should be parseable back
         parsed = json.loads(json_str)
-        self.assertEqual(parsed["contract_version"], "v1")
+        self.assertEqual(parsed["contract_version"], CONTRACT_VERSION)
 
     def test_service_once_exit_code_logic_success(self):
         """Verify exit code logic for success status."""

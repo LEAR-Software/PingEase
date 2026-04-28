@@ -1,4 +1,4 @@
-﻿# 🤖 AGENTS.md - Sesiones de Trabajo del Proyecto PingEase
+# 🤖 AGENTS.md - Sesiones de Trabajo del Proyecto PingEase
 
 **Propósito:** Registro cronológico de avances y estado del proyecto para continuar de una sesión a otra sin perder contexto.
 
