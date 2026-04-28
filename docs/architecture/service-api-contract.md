@@ -49,6 +49,23 @@ All requests are JSON objects with this shape:
 - `params` (`object`, optional): command parameters.
   - `dry_run` (`boolean`, optional, default `false`)
   - `headed` (`boolean`, optional, default `false`)
+- `auth` (`object`, required in secure mode): per-message session authentication.
+
+### Auth Fields (`auth`)
+
+When secure mode is enabled on the service wrapper, each request must include:
+
+- `scheme` (`string`): `"hmac-sha256-v1"`
+- `session_id` (`string`): identifier of active IPC session key
+- `nonce` (`string`): unique per request (anti-replay)
+- `ts_ms` (`integer`): unix epoch milliseconds
+- `signature` (`string`): hex digest HMAC-SHA256 over canonical request payload
+
+Notes:
+
+- A plain hash without secret is not sufficient.
+- Signature validation uses a shared session secret known by UI and service wrapper.
+- Service rejects replayed nonces and stale timestamps outside the allowed window.
 
 ## Response Envelope
 
@@ -108,6 +125,9 @@ When the request cannot be processed at the envelope/command level:
 - `UNSUPPORTED_COMMAND`: command not implemented.
 - `SERVICE_EXECUTION_ERROR`: command reached service core but failed before result mapping.
 - `INTERNAL_ERROR`: unexpected wrapper failure.
+- `AUTH_REQUIRED`: request missing `auth` when secure mode requires it.
+- `AUTH_INVALID`: auth payload/signature/session/timestamp is invalid.
+- `AUTH_REPLAY`: nonce already used for the same session.
 
 ## Command Semantics (`run_cycle`)
 
@@ -139,11 +159,23 @@ This separates protocol failure (`ok=false`) from domain execution outcome (`res
   "command": "run_cycle",
   "params": {
     "dry_run": true
+  },
+  "auth": {
+    "scheme": "hmac-sha256-v1",
+    "session_id": "sess-01",
+    "nonce": "6f0ee4d4-43b9-4fb1-a0fd-9b5f4f6a8f95",
+    "ts_ms": 1777300000123,
+    "signature": "<hex-hmac>"
   }
 }
 ```
 
+<<<<<<< HEAD
 **Response:**
+=======
+Response:
+
+>>>>>>> a48e900 (feat(p0-03): harden IPC adapter with session HMAC auth)
 ```json
 {
   "contract_version": "v1",
@@ -172,6 +204,24 @@ This separates protocol failure (`ok=false`) from domain execution outcome (`res
 ```
 
 **Response:**
+```json
+{
+  "contract_version": "v1",
+  "request_id": "ui-002",
+  "command": "reboot_router",
+  "params": {},
+  "auth": {
+    "scheme": "hmac-sha256-v1",
+    "session_id": "sess-01",
+    "nonce": "1d7dbb8e-e05d-4c08-9f81-f14f0868748f",
+    "ts_ms": 1777300000999,
+    "signature": "<hex-hmac>"
+  }
+}
+```
+
+Response:
+
 ```json
 {
   "contract_version": "v1",

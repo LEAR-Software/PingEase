@@ -40,6 +40,12 @@ Iniciar P0-03 definiendo el contrato local UI <-> service sin romper el contrato
 - **Validación final ejecutada:**
   - `python -u -m unittest tests.test_ipc_adapter tests.test_service_api tests.test_service_once_mode -v`
   - Resultado: **21/21 tests pasando** ✅
+- **Hardening de seguridad IPC agregado:**
+  - `wifi_optimizer/ipc_adapter.py` ahora soporta autenticación `hmac-sha256-v1`
+  - Validación de `auth` por sesión (`session_id`) con `nonce` + `ts_ms` anti-replay
+  - Errores de protocolo de auth: `AUTH_REQUIRED`, `AUTH_INVALID`, `AUTH_REPLAY`
+  - Helpers para firma (`compute_auth_signature`) y limpieza de cache de nonce en tests
+  - Cobertura extendida en `tests/test_ipc_adapter.py` para firma inválida, replay y timestamp vencido
 
 ### ⚠️ Pendiente
 - Elegir transporte MVP para P0-03/P0-04 (`localhost HTTP` vs `named pipe` vs `stdio`).
@@ -548,6 +554,6 @@ Cuando continúes, actualiza esta sección con:
 ---
 
 **Última Actualización:** 2026-04-27 19:10 UTC  
-**Sesión:** P0-03 implementación de `ipc_adapter` + tests de contrato/envelope  
-**Status:** ✅ En progreso controlado (contrato + adaptador mínimo + tests en verde)  
-**Próxima:** Integrar el adaptador en wrapper de transporte (HTTP/pipe/stdio) para P0-04
+**Sesión:** P0-03 hardening de `ipc_adapter` con auth HMAC por sesión  
+**Status:** ✅ En progreso controlado (contrato + adaptador + seguridad base + tests en verde)  
+**Próxima:** Definir/implementar handshake de sesión en wrapper de transporte (HTTP/pipe/stdio) para P0-04
