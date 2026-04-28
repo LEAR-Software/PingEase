@@ -6,13 +6,10 @@ reuse `handle_request` without changing protocol behavior.
 
 from __future__ import annotations
 
-<<<<<<< HEAD
-=======
 import hashlib
 import hmac
 import json
 import time
->>>>>>> a48e900 (feat(p0-03): harden IPC adapter with session HMAC auth)
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:

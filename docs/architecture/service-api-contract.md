@@ -152,6 +152,7 @@ This separates protocol failure (`ok=false`) from domain execution outcome (`res
 ### Example A: `dry_run=true`
 
 **Request:**
+
 ```json
 {
   "contract_version": "v1",
@@ -170,12 +171,8 @@ This separates protocol failure (`ok=false`) from domain execution outcome (`res
 }
 ```
 
-<<<<<<< HEAD
 **Response:**
-=======
-Response:
 
->>>>>>> a48e900 (feat(p0-03): harden IPC adapter with session HMAC auth)
 ```json
 {
   "contract_version": "v1",
@@ -195,15 +192,7 @@ Response:
 ### Example B: Unsupported command
 
 **Request:**
-```json
-{
-  "contract_version": "v1",
-  "request_id": "ui-002",
-  "command": "reboot_router"
-}
-```
 
-**Response:**
 ```json
 {
   "contract_version": "v1",
@@ -220,7 +209,7 @@ Response:
 }
 ```
 
-Response:
+**Response:**
 
 ```json
 {
@@ -235,4 +224,3 @@ Response:
   }
 }
 ```
-

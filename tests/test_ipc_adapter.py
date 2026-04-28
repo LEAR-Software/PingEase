@@ -6,15 +6,11 @@ from unittest.mock import MagicMock
 from wifi_optimizer.ipc_adapter import (
     AUTH_SCHEME_HMAC_SHA256_V1,
     CONTRACT_VERSION,
-<<<<<<< HEAD
-    ERROR_INTERNAL,
-=======
     ERROR_AUTH_INVALID,
     ERROR_AUTH_REPLAY,
     ERROR_AUTH_REQUIRED,
->>>>>>> a48e900 (feat(p0-03): harden IPC adapter with session HMAC auth)
-    ERROR_INVALID_REQUEST,
     ERROR_INTERNAL,
+    ERROR_INVALID_REQUEST,
     ERROR_SERVICE_EXECUTION,
     ERROR_UNSUPPORTED_COMMAND,
     ERROR_UNSUPPORTED_CONTRACT_VERSION,
@@ -54,6 +50,7 @@ class IpcAdapterTests(unittest.TestCase):
     ) -> dict:
         if params is None:
             params = {}
+
         ts_ms = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
         nonce = str(uuid.uuid4())
         signature = compute_auth_signature(
@@ -80,45 +77,44 @@ class IpcAdapterTests(unittest.TestCase):
         }
 
     def test_rejects_non_object_request(self):
-        service = MagicMock()
-
-        response = handle_request("not-a-dict", service)
-
+        response = handle_request("not-a-dict", MagicMock())
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
-        service.run_cycle.assert_not_called()
+
+    def test_rejects_missing_contract_version(self):
+        response = handle_request(
+            {"request_id": "req-missing-cv", "command": "run_cycle"},
+            MagicMock(),
+        )
+        self.assertFalse(response["ok"])
+        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
+        self.assertEqual(response["request_id"], "req-missing-cv")
 
     def test_rejects_unsupported_contract_version(self):
-        service = MagicMock()
-
         response = handle_request(
-            {
-                "contract_version": "v2",
-                "request_id": "req-1",
-                "command": "run_cycle",
-            },
-            service,
+            {"contract_version": "v2", "request_id": "req-1", "command": "run_cycle"},
+            MagicMock(),
         )
-
         self.assertFalse(response["ok"])
-        self.assertEqual(response["request_id"], "req-1")
         self.assertEqual(response["error"]["code"], ERROR_UNSUPPORTED_CONTRACT_VERSION)
 
-    def test_rejects_unsupported_command(self):
-        service = MagicMock()
-
+    def test_rejects_missing_command_field(self):
         response = handle_request(
-            self._signed_request(request_id="req-2", command="reboot_router", params={}),
-            service,
-            session_secrets=self.session_secrets,
+            {"contract_version": CONTRACT_VERSION, "request_id": "req-no-cmd"},
+            MagicMock(),
         )
-
         self.assertFalse(response["ok"])
-        self.assertEqual(response["error"]["code"], ERROR_UNSUPPORTED_COMMAND)
-        self.assertEqual(response["request_id"], "req-2")
+        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
+
+    def test_rejects_blank_command_string(self):
+        response = handle_request(
+            {"contract_version": CONTRACT_VERSION, "command": "   "},
+            MagicMock(),
+        )
+        self.assertFalse(response["ok"])
+        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
 
     def test_rejects_missing_auth_when_required(self):
-        service = MagicMock()
         response = handle_request(
             {
                 "contract_version": CONTRACT_VERSION,
@@ -126,36 +122,36 @@ class IpcAdapterTests(unittest.TestCase):
                 "command": "run_cycle",
                 "params": {},
             },
-            service,
+            MagicMock(),
             session_secrets=self.session_secrets,
         )
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], ERROR_AUTH_REQUIRED)
 
+    def test_rejects_unsupported_command(self):
+        response = handle_request(
+            self._signed_request(request_id="req-2", command="reboot_router", params={}),
+            MagicMock(),
+            session_secrets=self.session_secrets,
+        )
+        self.assertFalse(response["ok"])
+        self.assertEqual(response["error"]["code"], ERROR_UNSUPPORTED_COMMAND)
+
     def test_accepts_valid_signed_request(self):
         service = MagicMock()
         service.run_cycle.return_value = _FakeResult(status="success")
-
         response = handle_request(
             self._signed_request(request_id="req-valid", params={"dry_run": True}),
             service,
             session_secrets=self.session_secrets,
         )
-
         self.assertTrue(response["ok"])
-        self.assertEqual(response["request_id"], "req-valid")
         service.run_cycle.assert_called_once_with(dry_run=True, headed=False)
 
     def test_rejects_invalid_signature(self):
-        service = MagicMock()
         request = self._signed_request(request_id="req-badsig")
         request["auth"]["signature"] = "deadbeef"
-
-        response = handle_request(
-            request,
-            service,
-            session_secrets=self.session_secrets,
-        )
+        response = handle_request(request, MagicMock(), session_secrets=self.session_secrets)
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], ERROR_AUTH_INVALID)
 
@@ -172,7 +168,6 @@ class IpcAdapterTests(unittest.TestCase):
         self.assertEqual(second["error"]["code"], ERROR_AUTH_REPLAY)
 
     def test_rejects_stale_timestamp(self):
-        service = MagicMock()
         stale_ms = int((datetime.now(tz=timezone.utc) - timedelta(minutes=5)).timestamp() * 1000)
         request = self._signed_request(request_id="req-stale")
         request["auth"]["ts_ms"] = stale_ms
@@ -186,22 +181,52 @@ class IpcAdapterTests(unittest.TestCase):
             params=request["params"],
         )
 
-        response = handle_request(request, service, session_secrets=self.session_secrets)
+        response = handle_request(request, MagicMock(), session_secrets=self.session_secrets)
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], ERROR_AUTH_INVALID)
 
-    def test_rejects_invalid_params_type(self):
+    def test_accepts_explicit_null_params(self):
         service = MagicMock()
-
-        response = handle_request(
-            {
-                "contract_version": CONTRACT_VERSION,
-                "command": "run_cycle",
-                "params": "bad",
-            },
-            service,
+        service.run_cycle.return_value = _FakeResult(status="success")
+        request = self._signed_request(params={})
+        request["params"] = None
+        request["auth"]["signature"] = compute_auth_signature(
+            session_secret=self.session_secret,
+            session_id=self.session_id,
+            nonce=request["auth"]["nonce"],
+            ts_ms=request["auth"]["ts_ms"],
+            request_id=request["request_id"],
+            command=request["command"],
+            params={},
         )
 
+        response = handle_request(request, service, session_secrets=self.session_secrets)
+        self.assertTrue(response["ok"])
+        service.run_cycle.assert_called_once_with(dry_run=False, headed=False)
+
+    def test_rejects_invalid_params_type(self):
+        response = handle_request(
+            {"contract_version": CONTRACT_VERSION, "command": "run_cycle", "params": "bad"},
+            MagicMock(),
+        )
+        self.assertFalse(response["ok"])
+        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
+
+    def test_rejects_non_bool_dry_run(self):
+        response = handle_request(
+            self._signed_request(params={"dry_run": "true"}),
+            MagicMock(),
+            session_secrets=self.session_secrets,
+        )
+        self.assertFalse(response["ok"])
+        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
+
+    def test_rejects_non_bool_headed(self):
+        response = handle_request(
+            self._signed_request(params={"headed": 1}),
+            MagicMock(),
+            session_secrets=self.session_secrets,
+        )
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
 
@@ -249,114 +274,6 @@ class IpcAdapterTests(unittest.TestCase):
         self.assertEqual(response["request_id"], "ui-err")
         self.assertEqual(response["error"]["code"], ERROR_SERVICE_EXECUTION)
 
-<<<<<<< HEAD
-    def test_rejects_missing_contract_version(self):
-        service = MagicMock()
-
-        response = handle_request(
-            {
-                "request_id": "req-missing-cv",
-                "command": "run_cycle",
-            },
-            service,
-        )
-
-        self.assertFalse(response["ok"])
-        self.assertEqual(response["request_id"], "req-missing-cv")
-        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
-        service.run_cycle.assert_not_called()
-
-    def test_rejects_missing_command_field(self):
-        service = MagicMock()
-
-        response = handle_request(
-            {
-                "contract_version": CONTRACT_VERSION,
-                "request_id": "req-no-cmd",
-            },
-            service,
-        )
-
-        self.assertFalse(response["ok"])
-        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
-        service.run_cycle.assert_not_called()
-
-    def test_rejects_blank_command_string(self):
-        service = MagicMock()
-
-        response = handle_request(
-            {
-                "contract_version": CONTRACT_VERSION,
-                "command": "   ",
-            },
-            service,
-        )
-
-        self.assertFalse(response["ok"])
-        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
-        service.run_cycle.assert_not_called()
-
-    def test_accepts_explicit_null_params(self):
-        service = MagicMock()
-        service.run_cycle.return_value = _FakeResult(status="success")
-
-        response = handle_request(
-            {
-                "contract_version": CONTRACT_VERSION,
-                "command": "run_cycle",
-                "params": None,
-            },
-            service,
-        )
-
-        self.assertTrue(response["ok"])
-        service.run_cycle.assert_called_once_with(dry_run=False, headed=False)
-
-    def test_rejects_non_bool_dry_run(self):
-        service = MagicMock()
-
-        response = handle_request(
-            {
-                "contract_version": CONTRACT_VERSION,
-                "command": "run_cycle",
-                "params": {"dry_run": "true"},
-            },
-            service,
-        )
-
-        self.assertFalse(response["ok"])
-        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
-        service.run_cycle.assert_not_called()
-
-    def test_rejects_non_bool_headed(self):
-        service = MagicMock()
-
-        response = handle_request(
-            {
-                "contract_version": CONTRACT_VERSION,
-                "command": "run_cycle",
-                "params": {"headed": 1},
-            },
-            service,
-        )
-
-        self.assertFalse(response["ok"])
-        self.assertEqual(response["error"]["code"], ERROR_INVALID_REQUEST)
-        service.run_cycle.assert_not_called()
-
-    def test_non_dict_to_dict_triggers_internal_error(self):
-        service = MagicMock()
-        bad_result = MagicMock()
-        bad_result.to_dict.return_value = "not-a-dict"
-        service.run_cycle.return_value = bad_result
-
-        response = handle_request(
-            {
-                "contract_version": CONTRACT_VERSION,
-                "command": "run_cycle",
-            },
-            service,
-=======
     def test_non_dict_result_maps_to_internal_error(self):
         service = MagicMock()
         bad_result = MagicMock()
@@ -367,28 +284,31 @@ class IpcAdapterTests(unittest.TestCase):
             self._signed_request(request_id="req-internal"),
             service,
             session_secrets=self.session_secrets,
->>>>>>> a48e900 (feat(p0-03): harden IPC adapter with session HMAC auth)
         )
 
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], ERROR_INTERNAL)
 
-<<<<<<< HEAD
     def test_response_always_echoes_request_id(self):
         service = MagicMock()
 
-        for error_request in [
+        error_requests = [
             {"contract_version": "v99", "request_id": "echo-1", "command": "run_cycle"},
             {"contract_version": CONTRACT_VERSION, "request_id": "echo-2", "command": ""},
-            {"contract_version": CONTRACT_VERSION, "request_id": "echo-3", "command": "unknown"},
-        ]:
-            with self.subTest(request=error_request):
-                response = handle_request(error_request, service)
-                self.assertFalse(response["ok"])
-                self.assertEqual(response["request_id"], error_request["request_id"])
+            {
+                "contract_version": CONTRACT_VERSION,
+                "request_id": "echo-3",
+                "command": "run_cycle",
+                "params": {},
+            },
+        ]
 
-=======
->>>>>>> a48e900 (feat(p0-03): harden IPC adapter with session HMAC auth)
+        for req in error_requests:
+            with self.subTest(request=req):
+                response = handle_request(req, service, session_secrets=self.session_secrets)
+                self.assertFalse(response["ok"])
+                self.assertEqual(response["request_id"], req["request_id"])
+
 
 if __name__ == "__main__":
     unittest.main()
