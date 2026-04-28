@@ -553,7 +553,7 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-27 19:10 UTC  
-**Sesión:** P0-03 hardening de `ipc_adapter` con auth HMAC por sesión  
-**Status:** ✅ En progreso controlado (contrato + adaptador + seguridad base + tests en verde)  
-**Próxima:** Definir/implementar handshake de sesión en wrapper de transporte (HTTP/pipe/stdio) para P0-04
+**Última Actualización:** 2026-04-28  
+**Sesión:** P0-03 — CERRADA ✅  
+**Status:** PR #23 abierto, 40/40 tests verdes, HMAC auth documentada, gap P0-04 registrado  
+**Próxima:** Merge PR #23 → iniciar P0-04 (Windows service skeleton + session handshake)
