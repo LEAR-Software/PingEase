@@ -4,6 +4,53 @@
 
 ---
 
+## 📍 Sesión 2026-04-29 (P0-05 Kickoff — Windows secrets baseline)
+
+### 🧩 Issue en Trabajo (obligatorio)
+- Repo: `LEAR-Software/PingEase`
+- Issue: `#6 [P0-05] Define Windows secrets baseline`
+
+### 🌿 Rama de Sesión (obligatorio)
+- Rama: `feature/P0-05-windows-secrets-baseline`
+- Base: `main` (post-merge de PR #24)
+
+### 🎯 Objetivo
+Definir baseline de secretos en Windows para el runtime del servicio (storage, acceso, rotacion y rollback), sin filtrar secretos en repo ni logs.
+
+### ✅ Completado
+- Verificada sincronizacion de `main` con `origin/main` (`git pull --ff-only`): actualizado y en linea con merge de PR #24.
+- Verificada presencia de fixes de review previa (P0-03/P0-04) en codigo y docs:
+  - `wifi_optimizer/ipc_adapter.py` usa `TYPE_CHECKING` guard para `OptimizationService`.
+  - `tests/test_ipc_adapter.py` incluye cobertura extendida de validaciones de contrato/auth.
+  - `docs/architecture/service-api-contract.md` mantiene ejemplos request/response pareados.
+- Validacion ejecutada de test suite principal: `60/60` tests pasando.
+- Issue `#6` marcado con trazabilidad de inicio de sesion mediante comentario operativo (branch + plan inmediato).
+- Rama de sesion creada desde `main`: `feature/P0-05-windows-secrets-baseline`.
+
+### ⚠️ Pendiente
+- Crear `docs/architecture/secrets.md` con baseline P0-05 (storage, acceso, rotacion, rollback, threat model minimo).
+- Revisar y endurecer puntos de potencial leakage en logs/bootstrap para secretos de sesion.
+- Abrir PR de P0-05 con evidencia de cumplimiento de DoD y pruebas asociadas.
+
+### 🔗 Enlaces Críticos
+- Issue P0-05: https://github.com/LEAR-Software/PingEase/issues/6
+- Backlog MVP: `docs/mvp-windows-backlog.md`
+- Service runner: `wifi_optimizer/service_runner.py`
+- Contract IPC local: `docs/architecture/service-api-contract.md`
+
+### 💾 Estado Final
+- Rama: `feature/P0-05-windows-secrets-baseline`
+- Issue: `#6` abierto, en ejecucion
+- PR: no abierto aun
+- Cambios: kickoff de sesion y trazabilidad actualizada en `AGENTS.md`
+
+### 🚀 Recomendación para Next Session
+1. Terminar borrador de `docs/architecture/secrets.md` y validarlo contra DoD de issue #6.
+2. Implementar hardening minimo de manejo de secretos en runtime (si aplica en codigo).
+3. Preparar PR P0-05 con checklist de cumplimiento y evidencia de tests.
+
+---
+
 ## 📍 Sesión 2026-04-28 (P0-03 Review Completion — GitHub Copilot Analysis)
 
 ### 🧩 Objetivo Principal
@@ -688,7 +735,7 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-28  
-**Sesión:** P0-04 — EN PROGRESO  
-**Status:** PR #24 abierto, 60/60 tests verdes, service skeleton implementado  
-**Próxima:** Merge PR #24 → iniciar P0-05 (Windows secrets baseline)
+**Última Actualización:** 2026-04-29  
+**Sesión:** P0-05 — EN PROGRESO  
+**Status:** issue #6 activo, rama `feature/P0-05-windows-secrets-baseline` creada, baseline de secretos en definicion  
+**Próxima:** redactar `docs/architecture/secrets.md` + abrir PR de P0-05 con evidencia DoD

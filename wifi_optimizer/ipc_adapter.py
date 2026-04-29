@@ -58,7 +58,12 @@ def compute_auth_signature(
     command: str,
     params: dict[str, Any],
 ) -> str:
-    """Compute HMAC signature for one IPC request envelope."""
+    """Compute HMAC signature for one IPC request envelope.
+
+    SECURITY: This function uses the session_secret to derive a signature
+    over the canonical request body (sorted JSON + body hash + metadata).
+    The secret itself is NOT logged or leaked.
+    """
     payload = _signing_payload(request_id=request_id, command=command, params=params)
     body_sha256 = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     message = f"{session_id}.{nonce}.{ts_ms}.{body_sha256}"
@@ -67,6 +72,7 @@ def compute_auth_signature(
         msg=message.encode("utf-8"),
         digestmod=hashlib.sha256,
     ).hexdigest()
+    # NOTE: session_secret never appears in logs or error messages
 
 
 def _consume_nonce(session_id: str, nonce: str, now_ms: int, window_ms: int) -> bool:
@@ -120,7 +126,20 @@ def handle_request(
     require_auth: bool = True,
     auth_window_ms: int = DEFAULT_AUTH_WINDOW_MS,
 ) -> dict[str, Any]:
-    """Validate and dispatch one IPC request envelope."""
+    """Validate and dispatch one IPC request envelope.
+
+    SECURITY VALIDATION:
+    1. Contract version check (forward compatibility)
+    2. Command validation (only 'run_cycle' supported)
+    3. Parameter validation (types, ranges)
+    4. Auth validation if required:
+       - Timestamp within auth_window_ms
+       - Nonce never seen before (replay protection)
+       - HMAC-SHA256 signature match (uses constant-time compare)
+    5. Service execution (delegated to OptimizationService)
+
+    See docs/architecture/secrets.md for threat model.
+    """
     if not isinstance(request, dict):
         return _error_response(ERROR_INVALID_REQUEST, "Request must be a JSON object.")
 
@@ -159,19 +178,17 @@ def handle_request(
             request_id=request_id,
         )
 
+    if session_secrets is None:
+        session_secrets = {}
+
     auth = request.get("auth")
-    if auth is None:
-        if require_auth:
+
+    # Auth validation — only if required
+    if require_auth:
+        if auth is None:
             return _error_response(
                 ERROR_AUTH_REQUIRED,
-                "Missing required field 'auth'.",
-                request_id=request_id,
-            )
-    else:
-        if not isinstance(auth, dict):
-            return _error_response(
-                ERROR_AUTH_INVALID,
-                "Field 'auth' must be an object.",
+                "Missing required 'auth' field.",
                 request_id=request_id,
             )
 
@@ -202,8 +219,7 @@ def handle_request(
                 request_id=request_id,
             )
 
-        secrets = session_secrets or {}
-        secret = secrets.get(session_id)
+        secret = session_secrets.get(session_id)
         if secret is None:
             return _error_response(
                 ERROR_AUTH_INVALID,
@@ -220,6 +236,7 @@ def handle_request(
                 details={"window_ms": auth_window_ms},
             )
 
+        # Replay protection: nonce must not have been seen before
         if not _consume_nonce(session_id=session_id, nonce=nonce, now_ms=now_ms, window_ms=auth_window_ms):
             return _error_response(
                 ERROR_AUTH_REPLAY,
@@ -227,6 +244,7 @@ def handle_request(
                 request_id=request_id,
             )
 
+        # Constant-time comparison to prevent timing attacks
         expected_signature = compute_auth_signature(
             session_secret=secret,
             session_id=session_id,
@@ -243,6 +261,7 @@ def handle_request(
                 "Auth signature mismatch.",
                 request_id=request_id,
             )
+        # Auth validation complete — request is authenticated
 
     if command != COMMAND_RUN_CYCLE:
         return _error_response(

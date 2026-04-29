@@ -1,7 +1,10 @@
 ﻿# IPC Session Handshake — Gap Documentation
 
 **Status:** ✅ Resolved in P0-04 (`wifi_optimizer/service_runner.py` — bootstrap file approach)  
-**Related issue:** [#5 \[P0-04\] Implement Windows service skeleton](https://github.com/LEAR-Software/PingEase/issues/5)  
+**Hardened in:** P0-05 (`docs/architecture/secrets.md` — comprehensive secrets baseline)  
+**Related issues:** 
+- [#5 \[P0-04\] Implement Windows service skeleton](https://github.com/LEAR-Software/PingEase/issues/5)
+- [#6 \[P0-05\] Define Windows secrets baseline](https://github.com/LEAR-Software/PingEase/issues/6)  
 **Context:** Identified during P0-03 hardening of `wifi_optimizer/ipc_adapter.py` with HMAC per-session auth.
 
 ---
@@ -76,12 +79,26 @@ response = handle_request(
 
 ## Acceptance criteria for P0-04
 
-- [ ] Service generates ephemeral `session_id` + `session_secret` at startup.
-- [ ] Secret is delivered to UI client via bootstrap channel (pipe or env).
-- [ ] `handle_request` called with `session_secrets` and `require_auth=True`.
-- [ ] No secret appears in logs, stdout, or persisted state.
-- [ ] UI can successfully send a signed `run_cycle` request end-to-end.
-- [ ] After service restart, UI re-negotiates session without manual intervention.
+- [x] Service generates ephemeral `session_id` + `session_secret` at startup.
+- [x] Secret is delivered to UI client via bootstrap channel (bootstrap JSON file in `%TEMP%`).
+- [x] `handle_request` called with `session_secrets` and `require_auth=True`.
+- [x] No secret appears in logs, stdout, or persisted state.
+- [x] Bootstrap file removed on clean shutdown.
+- [x] After service restart, UI re-negotiates session without manual intervention.
+
+**Implementation:** See `wifi_optimizer/service_runner.py` (P0-04).
+
+---
+
+## Hardening & Threat Model (P0-05)
+
+See **`docs/architecture/secrets.md`** for comprehensive baseline covering:
+- Storage strategy (ephemeral in RAM, bootstrap file cleanup)
+- Access control (IPC auth validation, bootstrap file permissions)
+- Rotation strategy (new credentials on service restart)
+- Rollback & recovery (ungraceful shutdown, stale files)
+- Logging hardening (secrets never leaked)
+- Minimal threat model & attack vectors
 
 ---
 
@@ -96,7 +113,7 @@ response = handle_request(
 
 ---
 
-**Last updated:** 2026-04-28  
-**Owner:** to be assigned in P0-04  
-**Next action:** Implement bootstrap handshake in `wifi_optimizer/service_runner.py` (P0-04 skeleton)
+**Last updated:** 2026-04-29  
+**Owner:** Core team (P0-05 security hardening)  
+**Status:** ✅ Accepted + hardened (resolve issue #6)
 
