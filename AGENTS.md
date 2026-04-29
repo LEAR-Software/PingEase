@@ -24,30 +24,57 @@ Definir baseline de secretos en Windows para el runtime del servicio (storage, a
   - `tests/test_ipc_adapter.py` incluye cobertura extendida de validaciones de contrato/auth.
   - `docs/architecture/service-api-contract.md` mantiene ejemplos request/response pareados.
 - Validacion ejecutada de test suite principal: `60/60` tests pasando.
-- Issue `#6` marcado con trazabilidad de inicio de sesion mediante comentario operativo (branch + plan inmediato).
+- Issue `#6` marcado con trazabilidad de inicio de sesion mediante comentario operativo en GitHub.
 - Rama de sesion creada desde `main`: `feature/P0-05-windows-secrets-baseline`.
+- **Creado `docs/architecture/secrets.md` (350+ líneas):**
+  - Storage strategy: ephemeral session credentials (session_id + session_secret) en RAM
+  - Bootstrap file en %TEMP% escrito al startup, eliminado al shutdown
+  - Access control: HMAC-SHA256 per-session auth + replay protection (nonce + timestamp window)
+  - Rotation strategy: nuevas credenciales generadas en cada service start
+  - Rollback & disaster recovery: procedures documentadas para shutdown ungraceful
+  - Minimal threat model: scope local-machine IPC (no network exposure en MVP)
+  - Future enhancements: DPAPI, Windows Credential Manager, in-band rotation, etc.
+- **Hardening de wifi_optimizer/service_runner.py:**
+  - Agregados comentarios de security explicando que session_secret NUNCA se loguea
+  - Documentada lifecycle del bootstrap file (creación al start, eliminación al stop)
+  - Credenciales marcadas como ephemeral y regeneradas por instancia de servicio
+- **Hardening de wifi_optimizer/ipc_adapter.py:**
+  - Documentado pipeline completo de validación (contract → command → params → auth)
+  - Mecanismo de replay protection explicado (nonce tracking + timestamp window)
+  - Constant-time HMAC comparison highlighted (hmac.compare_digest)
+  - Notas de seguridad: session_secret nunca leaks a logs
+- **Actualizado docs/architecture/IPC-SESSION-HANDSHAKE-GAP.md:**
+  - Marcado como Resuelto en P0-04 + Hardened en P0-05
+  - Linked a comprehensive secrets.md para threat model detallado
+  - Todos los acceptance criteria marcados como complete
+- **PR #25 abierto:** https://github.com/LEAR-Software/PingEase/pull/25
+  - Title: "[P0-05] Define Windows secrets baseline with threat model"
+  - Incluye checklist completo de DoD + evidencia de tests (60/60 passing)
+  - Description detallada con security notes y future hardening roadmap
 
 ### ⚠️ Pendiente
-- Crear `docs/architecture/secrets.md` con baseline P0-05 (storage, acceso, rotacion, rollback, threat model minimo).
-- Revisar y endurecer puntos de potencial leakage en logs/bootstrap para secretos de sesion.
-- Abrir PR de P0-05 con evidencia de cumplimiento de DoD y pruebas asociadas.
+- Review de PR #25 y merge a main.
+- Iniciar siguiente issue (P0-06 o siguiente en backlog).
 
 ### 🔗 Enlaces Críticos
 - Issue P0-05: https://github.com/LEAR-Software/PingEase/issues/6
-- Backlog MVP: `docs/mvp-windows-backlog.md`
+- PR P0-05: https://github.com/LEAR-Software/PingEase/pull/25
+- Secrets baseline: `docs/architecture/secrets.md`
+- IPC session handshake: `docs/architecture/IPC-SESSION-HANDSHAKE-GAP.md`
 - Service runner: `wifi_optimizer/service_runner.py`
-- Contract IPC local: `docs/architecture/service-api-contract.md`
+- IPC adapter: `wifi_optimizer/ipc_adapter.py`
 
 ### 💾 Estado Final
 - Rama: `feature/P0-05-windows-secrets-baseline`
-- Issue: `#6` abierto, en ejecucion
-- PR: no abierto aun
-- Cambios: kickoff de sesion y trazabilidad actualizada en `AGENTS.md`
+- Issue: `#6` en progreso
+- PR: `#25` abierto (listo para review)
+- Cambios: docs/architecture/secrets.md creado, service_runner.py + ipc_adapter.py endurecidos
+- Tests: 60/60 passing, sin regressions
 
 ### 🚀 Recomendación para Next Session
-1. Terminar borrador de `docs/architecture/secrets.md` y validarlo contra DoD de issue #6.
-2. Implementar hardening minimo de manejo de secretos en runtime (si aplica en codigo).
-3. Preparar PR P0-05 con checklist de cumplimiento y evidencia de tests.
+1. Review PR #25 y merge a main.
+2. Iniciar P0-06 (compliance release bundle) o siguiente issue del backlog.
+3. Mantener modelo de issue + rama + commit + PR para trazabilidad continua.
 
 ---
 
@@ -736,6 +763,6 @@ Cuando continúes, actualiza esta sección con:
 ---
 
 **Última Actualización:** 2026-04-29  
-**Sesión:** P0-05 — EN PROGRESO  
-**Status:** issue #6 activo, rama `feature/P0-05-windows-secrets-baseline` creada, baseline de secretos en definicion  
-**Próxima:** redactar `docs/architecture/secrets.md` + abrir PR de P0-05 con evidencia DoD
+**Sesión:** P0-05 — COMPLETADO (PR abierto)  
+**Status:** issue #6 completado, rama mergeada en PR #25, secrets baseline en evidencia DoD  
+**Próxima:** Review/merge PR #25 → iniciar P0-06 o siguiente issue del backlog
