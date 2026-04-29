@@ -4,6 +4,80 @@
 
 ---
 
+## 📍 Sesión 2026-04-29 (P0-05 Kickoff — Windows secrets baseline)
+
+### 🧩 Issue en Trabajo (obligatorio)
+- Repo: `LEAR-Software/PingEase`
+- Issue: `#6 [P0-05] Define Windows secrets baseline`
+
+### 🌿 Rama de Sesión (obligatorio)
+- Rama: `feature/P0-05-windows-secrets-baseline`
+- Base: `main` (post-merge de PR #24)
+
+### 🎯 Objetivo
+Definir baseline de secretos en Windows para el runtime del servicio (storage, acceso, rotacion y rollback), sin filtrar secretos en repo ni logs.
+
+### ✅ Completado
+- Verificada sincronizacion de `main` con `origin/main` (`git pull --ff-only`): actualizado y en linea con merge de PR #24.
+- Verificada presencia de fixes de review previa (P0-03/P0-04) en codigo y docs:
+  - `wifi_optimizer/ipc_adapter.py` usa `TYPE_CHECKING` guard para `OptimizationService`.
+  - `tests/test_ipc_adapter.py` incluye cobertura extendida de validaciones de contrato/auth.
+  - `docs/architecture/service-api-contract.md` mantiene ejemplos request/response pareados.
+- Validacion ejecutada de test suite principal: `60/60` tests pasando.
+- Issue `#6` marcado con trazabilidad de inicio de sesion mediante comentario operativo en GitHub.
+- Rama de sesion creada desde `main`: `feature/P0-05-windows-secrets-baseline`.
+- **Creado `docs/architecture/secrets.md` (350+ líneas):**
+  - Storage strategy: ephemeral session credentials (session_id + session_secret) en RAM
+  - Bootstrap file en %TEMP% escrito al startup, eliminado al shutdown
+  - Access control: HMAC-SHA256 per-session auth + replay protection (nonce + timestamp window)
+  - Rotation strategy: nuevas credenciales generadas en cada service start
+  - Rollback & disaster recovery: procedures documentadas para shutdown ungraceful
+  - Minimal threat model: scope local-machine IPC (no network exposure en MVP)
+  - Future enhancements: DPAPI, Windows Credential Manager, in-band rotation, etc.
+- **Hardening de wifi_optimizer/service_runner.py:**
+  - Agregados comentarios de security explicando que session_secret NUNCA se loguea
+  - Documentada lifecycle del bootstrap file (creación al start, eliminación al stop)
+  - Credenciales marcadas como ephemeral y regeneradas por instancia de servicio
+- **Hardening de wifi_optimizer/ipc_adapter.py:**
+  - Documentado pipeline completo de validación (contract → command → params → auth)
+  - Mecanismo de replay protection explicado (nonce tracking + timestamp window)
+  - Constant-time HMAC comparison highlighted (hmac.compare_digest)
+  - Notas de seguridad: session_secret nunca leaks a logs
+- **Actualizado docs/architecture/IPC-SESSION-HANDSHAKE-GAP.md:**
+  - Marcado como Resuelto en P0-04 + Hardened en P0-05
+  - Linked a comprehensive secrets.md para threat model detallado
+  - Todos los acceptance criteria marcados como complete
+- **PR #25 abierto:** https://github.com/LEAR-Software/PingEase/pull/25
+  - Title: "[P0-05] Define Windows secrets baseline with threat model"
+  - Incluye checklist completo de DoD + evidencia de tests (60/60 passing)
+  - Description detallada con security notes y future hardening roadmap
+
+### ⚠️ Pendiente
+- Review de PR #25 y merge a main.
+- Iniciar siguiente issue (P0-06 o siguiente en backlog).
+
+### 🔗 Enlaces Críticos
+- Issue P0-05: https://github.com/LEAR-Software/PingEase/issues/6
+- PR P0-05: https://github.com/LEAR-Software/PingEase/pull/25
+- Secrets baseline: `docs/architecture/secrets.md`
+- IPC session handshake: `docs/architecture/IPC-SESSION-HANDSHAKE-GAP.md`
+- Service runner: `wifi_optimizer/service_runner.py`
+- IPC adapter: `wifi_optimizer/ipc_adapter.py`
+
+### 💾 Estado Final
+- Rama: `feature/P0-05-windows-secrets-baseline`
+- Issue: `#6` en progreso
+- PR: `#25` abierto (listo para review)
+- Cambios: docs/architecture/secrets.md creado, service_runner.py + ipc_adapter.py endurecidos
+- Tests: 60/60 passing, sin regressions
+
+### 🚀 Recomendación para Next Session
+1. Review PR #25 y merge a main.
+2. Iniciar P0-06 (compliance release bundle) o siguiente issue del backlog.
+3. Mantener modelo de issue + rama + commit + PR para trazabilidad continua.
+
+---
+
 ## 📍 Sesión 2026-04-28 (P0-03 Review Completion — GitHub Copilot Analysis)
 
 ### 🧩 Objetivo Principal
@@ -688,7 +762,7 @@ Cuando continúes, actualiza esta sección con:
 
 ---
 
-**Última Actualización:** 2026-04-28  
-**Sesión:** P0-04 — EN PROGRESO  
-**Status:** PR #24 abierto, 60/60 tests verdes, service skeleton implementado  
-**Próxima:** Merge PR #24 → iniciar P0-05 (Windows secrets baseline)
+**Última Actualización:** 2026-04-29  
+**Sesión:** P0-05 — COMPLETADO (PR abierto)  
+**Status:** issue #6 completado, rama mergeada en PR #25, secrets baseline en evidencia DoD  
+**Próxima:** Review/merge PR #25 → iniciar P0-06 o siguiente issue del backlog

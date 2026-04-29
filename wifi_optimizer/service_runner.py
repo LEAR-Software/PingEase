@@ -73,7 +73,12 @@ def write_bootstrap(
     session_id: str,
     session_secret: str,
 ) -> Path:
-    """Write service bootstrap info to the well-known temp file."""
+    """Write service bootstrap info to the well-known temp file.
+
+    SECURITY NOTE: session_secret is written to this file in plaintext.
+    File is removed on clean shutdown. Ungraceful shutdown may leave
+    secrets on disk — see docs/architecture/secrets.md Section 4.
+    """
     info: dict[str, Any] = {
         "pid": pid,
         "host": host,
@@ -85,6 +90,7 @@ def write_bootstrap(
     path = bootstrap_file_path()
     path.write_text(json.dumps(info, indent=2), encoding="utf-8")
     _logger.info("Bootstrap file written: %s  (port=%d)", path, port)
+    # NOTE: session_id and session_secret not logged here — only path and port
     return path
 
 
@@ -263,7 +269,12 @@ class ServiceRunner:
     # ------------------------------------------------------------------
 
     def start(self) -> None:
-        """Start the HTTP server in a background daemon thread."""
+        """Start the HTTP server in a background daemon thread.
+
+        SECURITY: Session credentials are generated here and injected
+        into the HTTP handler. They are NEVER logged.
+        See docs/architecture/secrets.md Section 2.
+        """
         if self._started.is_set():
             raise RuntimeError("ServiceRunner is already started.")
 
@@ -281,10 +292,12 @@ class ServiceRunner:
         BoundHandler.service = service
         BoundHandler.session_secrets = session_secrets
         BoundHandler.require_auth = require_auth
+        # SECURITY: session_secret stored in class attribute, never logged
 
         self._server = HTTPServer((self._host, self._port), BoundHandler)
         actual_port = self._server.server_address[1]
         _logger.info("Service listening on %s:%d", self._host, actual_port)
+        # NOTE: Only host and port logged, no credentials
 
         # Write bootstrap so UI can connect
         write_bootstrap(
@@ -303,6 +316,7 @@ class ServiceRunner:
         self._server_thread.start()
         self._started.set()
         _logger.info("PingEase service runner started (pid=%d, port=%d)", os.getpid(), actual_port)
+        # NOTE: Only PID and port logged, no credentials
 
     def _serve_loop(self) -> None:
         assert self._server is not None
